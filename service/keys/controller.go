@@ -24,9 +24,11 @@ func NewController(logger log.Logger) *controller {
 	}
 }
 
-func (*controller) Paths() []*framework.Path {
+func (c *controller) Paths() []*framework.Path {
 	return framework.PathAppend(
-		[]*framework.Path{},
+		[]*framework.Path{
+			c.pathKeys(),
+		},
 	)
 }
 

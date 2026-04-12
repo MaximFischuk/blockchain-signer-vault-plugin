@@ -8,6 +8,9 @@ const (
 
 	StorageErrorCode         = 2001
 	StorageEntryNotFoundCode = 2002
+
+	AlreadyExistsFormat = "key with id %q already exists"
+	AlreadyExistsCode   = 3001
 )
 
 type Error struct {
@@ -33,4 +36,8 @@ func StorageError(message string) *Error {
 
 func EntryNotFoundError(message string) *Error {
 	return &Error{message, StorageEntryNotFoundCode}
+}
+
+func AlreadyExistsError(id string) *Error {
+	return &Error{fmt.Sprintf(AlreadyExistsFormat, id), AlreadyExistsCode}
 }

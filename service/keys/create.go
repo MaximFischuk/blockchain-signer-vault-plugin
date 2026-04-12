@@ -2,14 +2,39 @@ package privatekeys
 
 import (
 	"context"
+	"errors"
 
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 	errorsPkg "github.com/maximfischuk/blockchain-signer-hashicorp-vault-plugin/core/errors"
 	log "github.com/maximfischuk/blockchain-signer-hashicorp-vault-plugin/core/log"
+	cryptoPkg "github.com/maximfischuk/blockchain-signer-hashicorp-vault-plugin/crypto"
 	"github.com/maximfischuk/blockchain-signer-hashicorp-vault-plugin/service"
-	"github.com/maximfischuk/blockchain-signer-hashicorp-vault-plugin/service/errors"
+	serviceErrors "github.com/maximfischuk/blockchain-signer-hashicorp-vault-plugin/service/errors"
 )
+
+// isClientError reports whether err should be surfaced as an HTTP 400 (bad
+// request) rather than an HTTP 500 (internal server error).
+//
+// Rules:
+//   - UnsupportedCurveError   → caller sent an unrecognised curve name (400)
+//   - AlreadyExistsCode       → caller tried to create a duplicate key (400)
+//   - MissingFieldCode        → caller omitted a required field (400)
+//   - everything else         → storage failure, entropy error, etc. (500)
+func isClientError(err error) bool {
+	if errors.As(err, new(cryptoPkg.UnsupportedCurveError)) {
+		return true
+	}
+	var coreErr *errorsPkg.Error
+	if errors.As(err, &coreErr) {
+		switch coreErr.Code {
+		case errorsPkg.MissingFieldCode,
+			errorsPkg.AlreadyExistsCode:
+			return true
+		}
+	}
+	return false
+}
 
 func (c *controller) NewCreateOperation() *framework.PathOperation {
 	successExample := Example200ResponseKeyCreated()
@@ -25,6 +50,7 @@ func (c *controller) NewCreateOperation() *framework.PathOperation {
 		},
 		Responses: map[int][]framework.Response{
 			200: {*successExample},
+			400: {service.Example400Response()},
 			500: {service.Example500Response()},
 		},
 	}
@@ -34,16 +60,25 @@ func (c *controller) handler() framework.OperationFunc {
 	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 		id := data.Get(service.IDLabel).(string)
 		curve := data.Get(service.CurveLabel).(string)
-		metadata := data.Get(service.MetadataLabel).(map[string]string)
+		metadata, _ := data.Get(service.MetadataLabel).(map[string]string)
+		if metadata == nil {
+			metadata = map[string]string{}
+		}
 
+		if id == "" {
+			return serviceErrors.ErrorResponse(errorsPkg.MissingFieldError("id"))
+		}
 		if curve == "" {
-			return errors.ErrorResponse(errorsPkg.MissingFieldError("curve"))
+			return serviceErrors.ErrorResponse(errorsPkg.MissingFieldError("curve"))
 		}
 
 		ctx = log.Context(ctx, c.logger)
 		key, err := c.operations.CreateKey().WithStorage(req.Storage).Execute(ctx, id, curve, metadata)
 		if err != nil {
-			return errors.ErrorResponse(err)
+			if isClientError(err) {
+				return serviceErrors.ErrorResponse(err)
+			}
+			return serviceErrors.ServerErrorResponse(err)
 		}
 
 		return KeyCreatedResponse(key), nil

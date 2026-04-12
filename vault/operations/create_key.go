@@ -6,10 +6,12 @@ import (
 	"crypto/ed25519"
 	"crypto/rand"
 	"encoding/hex"
+	"errors"
 	"time"
 
 	"github.com/decred/dcrd/dcrec/secp256k1/v4"
 	"github.com/hashicorp/vault/sdk/logical"
+	coreErrors "github.com/maximfischuk/blockchain-signer-hashicorp-vault-plugin/core/errors"
 	"github.com/maximfischuk/blockchain-signer-hashicorp-vault-plugin/crypto"
 	"github.com/maximfischuk/blockchain-signer-hashicorp-vault-plugin/vault/entities"
 	"github.com/maximfischuk/blockchain-signer-hashicorp-vault-plugin/vault/storage"
@@ -30,6 +32,19 @@ func (o createKeyOperation) WithStorage(storage logical.Storage) CreateKeyOperat
 }
 
 func (o *createKeyOperation) Execute(ctx context.Context, id, curve string, metadata map[string]string) (*entities.PrivateKey, error) {
+	// Guard against silently overwriting an existing key.
+	// ReadJSON returns StorageEntryNotFoundCode when the slot is free;
+	// any other outcome (nil error or a different storage error) is fatal.
+	var existing entities.PrivateKey
+	readErr := storage.ReadJSON(ctx, o.storage, storage.PrivateKeysStorageKey(id), &existing)
+	if readErr == nil {
+		return nil, coreErrors.AlreadyExistsError(id)
+	}
+	var coreErr *coreErrors.Error
+	if !errors.As(readErr, &coreErr) || coreErr.Code != coreErrors.StorageEntryNotFoundCode {
+		return nil, readErr
+	}
+
 	var key *entities.PrivateKey
 	var err error
 	switch curve {
