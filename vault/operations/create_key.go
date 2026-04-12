@@ -2,9 +2,8 @@ package operations
 
 import (
 	"context"
-	"crypto/ecdsa"
+	"crypto/ecdh"
 	"crypto/ed25519"
-	"crypto/elliptic"
 	"crypto/rand"
 	"encoding/hex"
 	"time"
@@ -114,22 +113,29 @@ func (o *createKeyOperation) createEd25519Key(id string, metadata map[string]str
 	}, nil
 }
 
-// createP256Key generates a NIST P-256 (prime256v1) ECDSA key pair using the
-// Go standard library crypto/ecdsa with crypto/rand as the entropy source.
-// The private key is the 32-byte big-endian D scalar; the public key is the
-// 33-byte compressed point — both hex-encoded.
+// createP256Key generates a NIST P-256 (prime256v1) key pair using the Go
+// standard library crypto/ecdh with crypto/rand as the entropy source.
+// The private key is the 32-byte big-endian scalar returned by ecdh.PrivateKey.Bytes()
+// (always zero-padded to the full curve size); the public key is the 33-byte
+// compressed point — both hex-encoded.
 func (o *createKeyOperation) createP256Key(id string, metadata map[string]string) (*entities.PrivateKey, error) {
-	privKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	privKey, err := ecdh.P256().GenerateKey(rand.Reader)
 	if err != nil {
 		return nil, err
 	}
 
-	// Pad D to exactly 32 bytes to guard against leading-zero stripping.
-	dBytes := make([]byte, 32)
-	privKey.D.FillBytes(dBytes)
+	// ecdh.PrivateKey.Bytes() returns the fixed-size, zero-padded big-endian
+	// scalar — always exactly 32 bytes for P-256, no big.Int arithmetic needed.
+	privKeyHex := hex.EncodeToString(privKey.Bytes())
 
-	privKeyHex := hex.EncodeToString(dBytes)
-	pubKeyHex := hex.EncodeToString(elliptic.MarshalCompressed(elliptic.P256(), privKey.X, privKey.Y))
+	// ecdh.PublicKey.Bytes() returns the uncompressed point: 0x04 || X(32) || Y(32).
+	// Derive the 33-byte compressed form by keeping X and choosing the prefix
+	// based on the parity of Y's least-significant byte (uncompressed[64]).
+	uncompressed := privKey.PublicKey().Bytes() // 0x04 | X(32) | Y(32) = 65 bytes
+	compressed := make([]byte, 33)
+	compressed[0] = 0x02 | (uncompressed[64] & 0x01) // 0x02 = Y even, 0x03 = Y odd
+	copy(compressed[1:], uncompressed[1:33])         // copy X
+	pubKeyHex := hex.EncodeToString(compressed)
 
 	now := time.Now().UTC()
 	return &entities.PrivateKey{
