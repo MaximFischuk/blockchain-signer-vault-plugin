@@ -11,7 +11,7 @@ import (
 
 type KeysOperations interface {
 	CreateKey() CreateKeyOperation
-	// ReadKey() ReadKeyOperation
+	ReadKey() ReadKeyOperation
 	// DeleteKey() DeleteKeyOperation
 	// UpdateKey() UpdateKeyOperation
 	// ListKeys() ListKeysOperation

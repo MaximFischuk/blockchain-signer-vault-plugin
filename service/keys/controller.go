@@ -28,6 +28,7 @@ func (c *controller) Paths() []*framework.Path {
 	return framework.PathAppend(
 		[]*framework.Path{
 			c.pathKeys(),
+			c.pathKey(),
 		},
 	)
 }
@@ -48,16 +49,36 @@ func (c *controller) pathKeys() *framework.Path {
 	}
 }
 
+func (c *controller) pathKey() *framework.Path {
+	return &framework.Path{
+		Pattern:         "keys/" + framework.GenericNameRegex(service.IDLabel),
+		HelpSynopsis:    "Read a private key by ID",
+		HelpDescription: "Read a private key by ID, returning the public key and metadata. The private scalar is never returned.",
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ReadOperation: c.NewReadOperation(),
+		},
+		Fields: map[string]*framework.FieldSchema{
+			service.IDLabel: service.IDFieldSchema,
+		},
+	}
+}
+
 type keysOperations struct {
 	createKey operations.CreateKeyOperation
+	readKey   operations.ReadKeyOperation
 }
 
 func newKeysOperations() operations.KeysOperations {
 	return &keysOperations{
 		createKey: operations.NewCreateKeyOperation(),
+		readKey:   operations.NewReadKeyOperation(),
 	}
 }
 
 func (o *keysOperations) CreateKey() operations.CreateKeyOperation {
 	return o.createKey
+}
+
+func (o *keysOperations) ReadKey() operations.ReadKeyOperation {
+	return o.readKey
 }

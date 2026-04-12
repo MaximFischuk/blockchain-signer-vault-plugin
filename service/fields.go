@@ -24,6 +24,7 @@ const (
 	SignatureLabel           = "signature"
 	AlgorithmLabel           = "signing_algorithm"
 	VersionLabel             = "version"
+	KeyTypeLabel             = "key_type"
 	CreatedAtLabel           = "created_at"
 	UpdatedAtLabel           = "updated_at"
 	SourceNamespace          = "source_namespace"
