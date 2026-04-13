@@ -12,9 +12,10 @@ import (
 type KeysOperations interface {
 	CreateKey() CreateKeyOperation
 	ReadKey() ReadKeyOperation
+	ExistsKey() ExistsKeyOperation
 	// DeleteKey() DeleteKeyOperation
 	// UpdateKey() UpdateKeyOperation
-	// ListKeys() ListKeysOperation
+	ListKeys() ListKeysOperation
 	// ImportKey() ImportKeyOperation
 	// SignPayload() SignPayloadOperation
 	// SignHash() SignHashOperation
@@ -30,6 +31,11 @@ type ReadKeyOperation interface {
 	WithStorage(storage logical.Storage) ReadKeyOperation
 }
 
+type ExistsKeyOperation interface {
+	Execute(ctx context.Context, id string) (bool, error)
+	WithStorage(storage logical.Storage) ExistsKeyOperation
+}
+
 type DeleteKeyOperation interface {
 	Execute(ctx context.Context, id string) error
 	WithStorage(storage logical.Storage) DeleteKeyOperation
@@ -41,7 +47,7 @@ type UpdateKeyOperation interface {
 }
 
 type ListKeysOperation interface {
-	Execute(ctx context.Context) ([]*entities.PrivateKey, error)
+	Execute(ctx context.Context) ([]string, error)
 	WithStorage(storage logical.Storage) ListKeysOperation
 }
 

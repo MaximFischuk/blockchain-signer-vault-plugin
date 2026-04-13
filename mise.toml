@@ -1,0 +1,5 @@
+[tasks.image]
+run = "docker build -t vault-signer:latest ."
+
+[tasks.'image:run']
+run = "docker run --rm -it -p 8200:8200 vault-signer:latest"

@@ -84,3 +84,23 @@ func (c *controller) handler() framework.OperationFunc {
 		return KeyCreatedResponse(key), nil
 	}
 }
+
+func (c *controller) ExistenceCheck() framework.ExistenceFunc {
+	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (bool, error) {
+		id := data.Get(service.IDLabel).(string)
+		if id == "" {
+			return false, errorsPkg.MissingFieldError("id")
+		}
+
+		ctx = log.Context(ctx, c.logger)
+		_, err := c.operations.ExistsKey().WithStorage(req.Storage).Execute(ctx, id)
+		if err != nil {
+			var coreErr *errorsPkg.Error
+			if errors.As(err, &coreErr) && coreErr.Code == errorsPkg.StorageEntryNotFoundCode {
+				return false, nil
+			}
+			return false, err
+		}
+		return true, nil
+	}
+}

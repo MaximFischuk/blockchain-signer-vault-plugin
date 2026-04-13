@@ -40,7 +40,11 @@ func (c *controller) pathKeys() *framework.Path {
 		HelpDescription: "Create and manage private keys used for signing operations",
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.CreateOperation: c.NewCreateOperation(),
+			logical.UpdateOperation: c.NewCreateOperation(),
+			logical.ReadOperation:   c.NewListOperation(),
+			logical.ListOperation:   c.NewListOperation(),
 		},
+		ExistenceCheck: c.ExistenceCheck(),
 		Fields: map[string]*framework.FieldSchema{
 			service.IDLabel:       service.IDFieldSchema,
 			service.CurveLabel:    service.CurveFieldSchema,
@@ -66,12 +70,16 @@ func (c *controller) pathKey() *framework.Path {
 type keysOperations struct {
 	createKey operations.CreateKeyOperation
 	readKey   operations.ReadKeyOperation
+	checkKey  operations.ExistsKeyOperation
+	listKeys  operations.ListKeysOperation
 }
 
 func newKeysOperations() operations.KeysOperations {
 	return &keysOperations{
 		createKey: operations.NewCreateKeyOperation(),
 		readKey:   operations.NewReadKeyOperation(),
+		checkKey:  operations.NewExistsKeyOperation(),
+		listKeys:  operations.NewListKeysOperation(),
 	}
 }
 
@@ -81,4 +89,12 @@ func (o *keysOperations) CreateKey() operations.CreateKeyOperation {
 
 func (o *keysOperations) ReadKey() operations.ReadKeyOperation {
 	return o.readKey
+}
+
+func (o *keysOperations) ExistsKey() operations.ExistsKeyOperation {
+	return o.checkKey
+}
+
+func (o *keysOperations) ListKeys() operations.ListKeysOperation {
+	return o.listKeys
 }
