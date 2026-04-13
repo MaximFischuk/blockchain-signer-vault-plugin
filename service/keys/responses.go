@@ -37,7 +37,7 @@ func KeyReadResponse(key *entities.PrivateKey) *logical.Response {
 func KeysListResponse(keys []string) *logical.Response {
 	return &logical.Response{
 		Data: map[string]any{
-			"keys": keys,
+			service.KeysLabel: keys,
 		},
 	}
 }

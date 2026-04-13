@@ -28,6 +28,7 @@ const (
 	CreatedAtLabel           = "created_at"
 	UpdatedAtLabel           = "updated_at"
 	SourceNamespace          = "source_namespace"
+	KeysLabel                = "keys"
 
 	NamespaceHeader = "X-Vault-Namespace"
 )
