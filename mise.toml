@@ -2,4 +2,11 @@
 run = "docker build -t vault-signer:latest ."
 
 [tasks.'image:run']
-run = "docker run --rm -it -p 8200:8200 vault-signer:latest"
+depends = ["image"]
+usage = '''
+flag "--detach" help="Run container in detached mode"
+'''
+run = "docker run --rm -it -p 8200:8200 --name vault-signer vault-signer:latest {% if detach %}-d{% endif %}"
+
+[tasks.'image:stop']
+run = "docker stop vault-signer"

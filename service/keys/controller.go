@@ -5,11 +5,17 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 	log "github.com/maximfischuk/blockchain-signer-hashicorp-vault-plugin/core/log"
 	"github.com/maximfischuk/blockchain-signer-hashicorp-vault-plugin/service"
-	"github.com/maximfischuk/blockchain-signer-hashicorp-vault-plugin/vault/operations"
+	operations "github.com/maximfischuk/blockchain-signer-hashicorp-vault-plugin/vault/operations/keys"
+	signOperations "github.com/maximfischuk/blockchain-signer-hashicorp-vault-plugin/vault/operations/sign"
 )
 
+type ControllerOperations interface {
+	operations.KeysOperations
+	signOperations.SignOperations
+}
+
 type controller struct {
-	operations operations.KeysOperations
+	operations ControllerOperations
 	logger     log.Logger
 }
 
@@ -29,6 +35,9 @@ func (c *controller) Paths() []*framework.Path {
 		[]*framework.Path{
 			c.pathKeys(),
 			c.pathKey(),
+			c.pathSignHash(),
+			c.pathSignMessage(),
+			c.pathSignBatchHashes(),
 		},
 	)
 }
@@ -67,21 +76,83 @@ func (c *controller) pathKey() *framework.Path {
 	}
 }
 
+func (c *controller) pathSignHash() *framework.Path {
+	return &framework.Path{
+		Pattern:         "keys/" + framework.GenericNameRegex(service.IDLabel) + "/sign/hash",
+		HelpSynopsis:    "Sign a pre-computed hash",
+		HelpDescription: "Signs a pre-computed hash (hex-encoded) using the private key identified by the given ID",
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.CreateOperation: c.NewSignHashOperation(),
+			logical.UpdateOperation: c.NewSignHashOperation(),
+		},
+		ExistenceCheck: c.ExistenceCheck(),
+		Fields: map[string]*framework.FieldSchema{
+			service.IDLabel:   service.IDFieldSchema,
+			service.HashLabel: service.HashFieldSchema,
+		},
+	}
+}
+
+func (c *controller) pathSignMessage() *framework.Path {
+	return &framework.Path{
+		Pattern:         "keys/" + framework.GenericNameRegex(service.IDLabel) + "/sign/message",
+		HelpSynopsis:    "Hash and sign a message",
+		HelpDescription: "Hashes the provided message with the specified hash function and signs the resulting digest using the private key identified by the given ID",
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.CreateOperation: c.NewSignMessageOperation(),
+			logical.UpdateOperation: c.NewSignMessageOperation(),
+		},
+		ExistenceCheck: c.ExistenceCheck(),
+		Fields: map[string]*framework.FieldSchema{
+			service.IDLabel:           service.IDFieldSchema,
+			service.MessageLabel:      service.MessageFieldSchema,
+			service.HashFunctionLabel: service.HashFunctionFieldSchema,
+		},
+	}
+}
+
+func (c *controller) pathSignBatchHashes() *framework.Path {
+	return &framework.Path{
+		Pattern:         "keys/" + framework.GenericNameRegex(service.IDLabel) + "/sign/batch",
+		HelpSynopsis:    "Sign a batch of pre-computed hashes",
+		HelpDescription: "Signs a list of pre-computed hashes (each hex-encoded) using the private key identified by the given ID. Signatures are returned in the same order as the input hashes.",
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.CreateOperation: c.NewSignBatchHashesOperation(),
+			logical.UpdateOperation: c.NewSignBatchHashesOperation(),
+		},
+		ExistenceCheck: c.ExistenceCheck(),
+		Fields: map[string]*framework.FieldSchema{
+			service.IDLabel:     service.IDFieldSchema,
+			service.HashesLabel: service.HashesFieldSchema,
+		},
+	}
+}
+
 type keysOperations struct {
 	createKey operations.CreateKeyOperation
 	readKey   operations.ReadKeyOperation
 	checkKey  operations.ExistsKeyOperation
 	listKeys  operations.ListKeysOperation
+
+	signHash        signOperations.SignHashOperation
+	signMessage     signOperations.SignMessageOperation
+	signBatchHashes signOperations.SignBatchHashesOperation
 }
 
-func newKeysOperations() operations.KeysOperations {
+func newKeysOperations() ControllerOperations {
 	return &keysOperations{
 		createKey: operations.NewCreateKeyOperation(),
 		readKey:   operations.NewReadKeyOperation(),
 		checkKey:  operations.NewExistsKeyOperation(),
 		listKeys:  operations.NewListKeysOperation(),
+
+		signHash:        signOperations.NewSignHashOperation(),
+		signMessage:     signOperations.NewSignMessageOperation(),
+		signBatchHashes: signOperations.NewSignBatchHashesOperation(),
 	}
 }
+
+// KeysOperations interface methods
 
 func (o *keysOperations) CreateKey() operations.CreateKeyOperation {
 	return o.createKey
@@ -97,4 +168,18 @@ func (o *keysOperations) ExistsKey() operations.ExistsKeyOperation {
 
 func (o *keysOperations) ListKeys() operations.ListKeysOperation {
 	return o.listKeys
+}
+
+// SignOperations interface methods
+
+func (o *keysOperations) SignHash() signOperations.SignHashOperation {
+	return o.signHash
+}
+
+func (o *keysOperations) SignMessage() signOperations.SignMessageOperation {
+	return o.signMessage
+}
+
+func (o *keysOperations) SignBatchHashes() signOperations.SignBatchHashesOperation {
+	return o.signBatchHashes
 }

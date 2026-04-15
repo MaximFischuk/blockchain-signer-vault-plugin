@@ -25,8 +25,8 @@ func isClientError(err error) bool {
 	if errors.As(err, new(cryptoPkg.UnsupportedCurveError)) {
 		return true
 	}
-	var coreErr *errorsPkg.Error
-	if errors.As(err, &coreErr) {
+	coreErr, ok := errors.AsType[errorsPkg.Error](err)
+	if ok {
 		switch coreErr.Code {
 		case errorsPkg.MissingFieldCode,
 			errorsPkg.AlreadyExistsCode:

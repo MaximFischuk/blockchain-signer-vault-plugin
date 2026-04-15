@@ -41,3 +41,19 @@ func KeysListResponse(keys []string) *logical.Response {
 		},
 	}
 }
+
+func SignatureResponse(signature string) *logical.Response {
+	return &logical.Response{
+		Data: map[string]any{
+			service.SignatureLabel: signature,
+		},
+	}
+}
+
+func SignaturesResponse(signatures []string) *logical.Response {
+	return &logical.Response{
+		Data: map[string]any{
+			service.SignaturesLabel: signatures,
+		},
+	}
+}

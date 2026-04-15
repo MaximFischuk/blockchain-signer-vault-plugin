@@ -1,4 +1,4 @@
-package operations
+package keys
 
 import (
 	"context"
@@ -17,8 +17,6 @@ type KeysOperations interface {
 	// UpdateKey() UpdateKeyOperation
 	ListKeys() ListKeysOperation
 	// ImportKey() ImportKeyOperation
-	// SignPayload() SignPayloadOperation
-	// SignHash() SignHashOperation
 }
 
 type CreateKeyOperation interface {
@@ -54,14 +52,4 @@ type ListKeysOperation interface {
 type ImportKeyOperation interface {
 	Execute(ctx context.Context, key *entities.PrivateKey) error
 	WithStorage(storage logical.Storage) ImportKeyOperation
-}
-
-type SignPayloadOperation interface {
-	Execute(ctx context.Context, id string, payload []byte) ([]byte, error)
-	WithStorage(storage logical.Storage) SignPayloadOperation
-}
-
-type SignHashOperation interface {
-	Execute(ctx context.Context, id string, hash []byte) ([]byte, error)
-	WithStorage(storage logical.Storage) SignHashOperation
 }

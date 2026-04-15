@@ -22,7 +22,7 @@ func (e *Error) GetCode() uint64 {
 	return e.Code
 }
 
-func (e *Error) Error() string {
+func (e Error) Error() string {
 	return fmt.Sprintf("%s", e.Message)
 }
 

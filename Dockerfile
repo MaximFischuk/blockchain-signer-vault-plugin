@@ -32,7 +32,7 @@ RUN apk add bash curl jq
 COPY --chmod=755 <<EOT /entrypoint.sh
 #!/usr/bin/env bash
 set -e
-( sleep 5 ; /vault-init-dev.sh ) & vault server -dev -dev-plugin-dir=/vault/plugins/ -dev-listen-address="0.0.0.0:8200" -log-level=trace
+( sleep 5 ; /vault-init-dev.sh ) & vault server -dev -dev-plugin-dir=/vault/plugins/ -dev-listen-address="0.0.0.0:8200" -dev-root-token-id=DevVaultToken -log-level=trace
 EOT
 
 EXPOSE 8200

@@ -22,6 +22,7 @@ const (
 	CompressedPublicKeyLabel = "compressed_public_key"
 	NamespaceLabel           = "namespace"
 	SignatureLabel           = "signature"
+	SignaturesLabel          = "signatures"
 	AlgorithmLabel           = "signing_algorithm"
 	VersionLabel             = "version"
 	KeyTypeLabel             = "key_type"
@@ -29,6 +30,10 @@ const (
 	UpdatedAtLabel           = "updated_at"
 	SourceNamespace          = "source_namespace"
 	KeysLabel                = "keys"
+	HashLabel                = "hash"
+	HashesLabel              = "hashes"
+	MessageLabel             = "message"
+	HashFunctionLabel        = "hash_function"
 
 	NamespaceHeader = "X-Vault-Namespace"
 )
@@ -108,5 +113,29 @@ var MetadataFieldSchema = &framework.FieldSchema{
 var CurveFieldSchema = &framework.FieldSchema{
 	Type:        framework.TypeString,
 	Description: "Elliptic curve used for the key pair",
+	Required:    true,
+}
+
+var HashFieldSchema = &framework.FieldSchema{
+	Type:        framework.TypeString,
+	Description: "Pre-computed hash to sign, in hex format (without 0x prefix)",
+	Required:    true,
+}
+
+var HashesFieldSchema = &framework.FieldSchema{
+	Type:        framework.TypeCommaStringSlice,
+	Description: "List of pre-computed hashes to sign, each in hex format (without 0x prefix)",
+	Required:    true,
+}
+
+var MessageFieldSchema = &framework.FieldSchema{
+	Type:        framework.TypeString,
+	Description: "Raw message bytes to hash and sign, in hex format (without 0x prefix)",
+	Required:    true,
+}
+
+var HashFunctionFieldSchema = &framework.FieldSchema{
+	Type:        framework.TypeString,
+	Description: "Hash function to apply to the message before signing (sha256, keccak256, sha512, sha3-256)",
 	Required:    true,
 }
