@@ -4,6 +4,7 @@ go 1.26.1
 
 require (
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.4.1
+	github.com/golang/mock v1.6.0
 	github.com/hashicorp/go-hclog v1.6.3
 	github.com/hashicorp/vault/api v1.23.0
 	github.com/hashicorp/vault/sdk v0.25.1
