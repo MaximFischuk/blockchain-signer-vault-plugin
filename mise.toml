@@ -1,3 +1,6 @@
+[tasks.test]
+run = "go test -v -race -cover ./..."
+
 [tasks.image]
 run = "docker build -t vault-signer:latest ."
 

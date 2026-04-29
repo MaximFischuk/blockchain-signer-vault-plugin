@@ -51,6 +51,20 @@ func (mr *MockKeysOperationsMockRecorder) CreateKey() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateKey", reflect.TypeOf((*MockKeysOperations)(nil).CreateKey))
 }
 
+// DeleteKey mocks base method.
+func (m *MockKeysOperations) DeleteKey() keys.DeleteKeyOperation {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteKey")
+	ret0, _ := ret[0].(keys.DeleteKeyOperation)
+	return ret0
+}
+
+// DeleteKey indicates an expected call of DeleteKey.
+func (mr *MockKeysOperationsMockRecorder) DeleteKey() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteKey", reflect.TypeOf((*MockKeysOperations)(nil).DeleteKey))
+}
+
 // ExistsKey mocks base method.
 func (m *MockKeysOperations) ExistsKey() keys.ExistsKeyOperation {
 	m.ctrl.T.Helper()

@@ -647,7 +647,9 @@ func TestErrorHandling(t *testing.T) {
 // mockStorageWithError is a mock storage that returns errors on Put.
 type mockStorageWithError struct {
 	logical.InmemStorage
-	putErr error
+	putErr    error
+	getErr    error
+	deleteErr error
 }
 
 func (m *mockStorageWithError) Put(ctx context.Context, entry *logical.StorageEntry) error {
@@ -655,6 +657,20 @@ func (m *mockStorageWithError) Put(ctx context.Context, entry *logical.StorageEn
 		return m.putErr
 	}
 	return m.InmemStorage.Put(ctx, entry)
+}
+
+func (m *mockStorageWithError) Get(ctx context.Context, key string) (*logical.StorageEntry, error) {
+	if m.getErr != nil {
+		return nil, m.getErr
+	}
+	return m.InmemStorage.Get(ctx, key)
+}
+
+func (m *mockStorageWithError) Delete(ctx context.Context, key string) error {
+	if m.deleteErr != nil {
+		return m.deleteErr
+	}
+	return m.InmemStorage.Delete(ctx, key)
 }
 
 // TestCreateKeyOperation_StorageError tests that storage errors are properly handled.
@@ -1043,4 +1059,251 @@ func TestMetadataPreservation(t *testing.T) {
 	for k, v := range metadata {
 		assert.Equal(t, v, readKey.Metadata[k], "metadata key %s should match", k)
 	}
+}
+
+// TestDeleteKeyOperation_HappyPath tests deleting an existing key.
+func TestDeleteKeyOperation_HappyPath(t *testing.T) {
+	ctx := context.Background()
+	storage := newInMemoryStorage()
+	id := "delete-test-key"
+
+	// Seed a key
+	seedKey(t, ctx, storage, id, crypto.Secp256k1)
+
+	// Verify the key exists before deletion
+	existsOp := keys.NewExistsKeyOperation().WithStorage(storage)
+	exists, err := existsOp.Execute(ctx, id)
+	require.NoError(t, err)
+	assert.True(t, exists)
+
+	// Delete the key
+	deleteOp := keys.NewDeleteKeyOperation().WithStorage(storage)
+	err = deleteOp.Execute(ctx, id)
+	require.NoError(t, err)
+
+	// Verify the key no longer exists
+	exists, err = existsOp.Execute(ctx, id)
+	require.NoError(t, err)
+	assert.False(t, exists)
+}
+
+// TestDeleteKeyOperation_KeyNotFound tests deleting a non-existent key.
+func TestDeleteKeyOperation_KeyNotFound(t *testing.T) {
+	ctx := context.Background()
+	storage := newInMemoryStorage()
+
+	deleteOp := keys.NewDeleteKeyOperation().WithStorage(storage)
+	err := deleteOp.Execute(ctx, "non-existent-key")
+	require.NoError(t, err)
+}
+
+// TestDeleteKeyOperation_DeleteMultipleKeys tests deleting multiple keys.
+func TestDeleteKeyOperation_DeleteMultipleKeys(t *testing.T) {
+	ctx := context.Background()
+	storage := newInMemoryStorage()
+
+	// Seed multiple keys
+	seedKey(t, ctx, storage, "key-1", crypto.Secp256k1)
+	seedKey(t, ctx, storage, "key-2", crypto.Ed25519)
+	seedKey(t, ctx, storage, "key-3", crypto.P256)
+
+	// Verify all keys exist
+	listOp := keys.NewListKeysOperation().WithStorage(storage)
+	keyList, err := listOp.Execute(ctx)
+	require.NoError(t, err)
+	assert.Len(t, keyList, 3)
+
+	// Delete one key
+	deleteOp := keys.NewDeleteKeyOperation().WithStorage(storage)
+	err = deleteOp.Execute(ctx, "key-2")
+	require.NoError(t, err)
+
+	// Verify only two keys remain
+	remainingKeys, err := listOp.Execute(ctx)
+	require.NoError(t, err)
+	assert.Len(t, remainingKeys, 2)
+
+	keyMap := make(map[string]bool)
+	for _, k := range remainingKeys {
+		keyMap[k] = true
+	}
+	assert.True(t, keyMap["key-1"])
+	assert.False(t, keyMap["key-2"])
+	assert.True(t, keyMap["key-3"])
+
+	// Delete remaining keys
+	err = deleteOp.Execute(ctx, "key-1")
+	require.NoError(t, err)
+	err = deleteOp.Execute(ctx, "key-3")
+	require.NoError(t, err)
+
+	// Verify no keys remain
+	remainingKeys, err = listOp.Execute(ctx)
+	require.NoError(t, err)
+	assert.Empty(t, remainingKeys)
+}
+
+// TestDeleteKeyOperation_DeleteDifferentCurves tests deleting keys with different curves.
+func TestDeleteKeyOperation_DeleteDifferentCurves(t *testing.T) {
+	tests := []struct {
+		name  string
+		curve string
+	}{
+		{"secp256k1", crypto.Secp256k1},
+		{"ed25519", crypto.Ed25519},
+		{"p256", crypto.P256},
+		{"x25519", crypto.X25519},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.Background()
+			storage := newInMemoryStorage()
+			id := "delete-curve-" + tt.name
+
+			// Seed a key
+			seedKey(t, ctx, storage, id, tt.curve)
+
+			// Verify the key exists
+			existsOp := keys.NewExistsKeyOperation().WithStorage(storage)
+			exists, err := existsOp.Execute(ctx, id)
+			require.NoError(t, err)
+			assert.True(t, exists)
+
+			// Delete the key
+			deleteOp := keys.NewDeleteKeyOperation().WithStorage(storage)
+			err = deleteOp.Execute(ctx, id)
+			require.NoError(t, err)
+
+			// Verify the key no longer exists
+			exists, err = existsOp.Execute(ctx, id)
+			require.NoError(t, err)
+			assert.False(t, exists)
+		})
+	}
+}
+
+// TestDeleteKeyOperation_WithMock tests DeleteKeyOperation using mocks.
+func TestDeleteKeyOperation_WithMock(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	ctx := context.Background()
+	id := "mock-delete-key"
+
+	mockDeleteKey := mocks.NewMockDeleteKeyOperation(ctrl)
+
+	// Test successful deletion
+	mockDeleteKey.EXPECT().
+		Execute(gomock.Any(), id).
+		Return(nil)
+
+	err := mockDeleteKey.Execute(ctx, id)
+	require.NoError(t, err)
+
+	// Test deletion with error
+	mockDeleteKey.EXPECT().
+		Execute(gomock.Any(), "error-key").
+		Return(errors.New("delete failed"))
+
+	err = mockDeleteKey.Execute(ctx, "error-key")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "delete failed")
+}
+
+// TestDeleteKeyOperation_WithStorage tests WithStorage copy semantics for DeleteKeyOperation.
+func TestDeleteKeyOperation_WithStorage(t *testing.T) {
+	storage1 := newInMemoryStorage()
+	storage2 := newInMemoryStorage()
+	ctx := context.Background()
+
+	// Create operation with storage1
+	operation := keys.NewDeleteKeyOperation().WithStorage(storage1)
+
+	// Verify it uses storage1
+	err := operation.Execute(ctx, "test-key")
+	require.NoError(t, err) // no error for non-existent key
+
+	// Create another operation with storage2
+	operation2 := keys.NewDeleteKeyOperation().WithStorage(storage2)
+
+	// Both operations should work independently
+	err = operation.Execute(ctx, "test-key-1")
+	require.NoError(t, err)
+	err = operation2.Execute(ctx, "test-key-2")
+	require.NoError(t, err)
+}
+
+// TestDeleteKeyOperation_DeleteThenRecreate tests deleting a key and creating a new one with the same ID.
+func TestDeleteKeyOperation_DeleteThenRecreate(t *testing.T) {
+	ctx := context.Background()
+	storage := newInMemoryStorage()
+	id := "recreate-test-key"
+
+	// Create a key
+	createdKey, err := keys.NewCreateKeyOperation().WithStorage(storage).Execute(ctx, id, crypto.Secp256k1, nil)
+	require.NoError(t, err)
+	require.NotNil(t, createdKey)
+
+	// Delete the key
+	deleteOp := keys.NewDeleteKeyOperation().WithStorage(storage)
+	err = deleteOp.Execute(ctx, id)
+	require.NoError(t, err)
+
+	// Verify the key is gone
+	existsOp := keys.NewExistsKeyOperation().WithStorage(storage)
+	exists, err := existsOp.Execute(ctx, id)
+	require.NoError(t, err)
+	assert.False(t, exists)
+
+	// Recreate with the same ID
+	newKey, err := keys.NewCreateKeyOperation().WithStorage(storage).Execute(ctx, id, crypto.Ed25519, nil)
+	require.NoError(t, err)
+	require.NotNil(t, newKey)
+
+	// Verify the new key has different properties
+	assert.Equal(t, id, newKey.ID)
+	assert.Equal(t, crypto.Ed25519, newKey.Curve)
+	assert.NotEqual(t, createdKey.PrivateKey, newKey.PrivateKey)
+}
+
+// TestDeleteKeyOperation_StorageError tests that storage errors are properly propagated.
+func TestDeleteKeyOperation_StorageError(t *testing.T) {
+	ctx := context.Background()
+
+	// Use a storage that returns errors on Get
+	mockStorage := &mockStorageWithError{
+		getErr: errors.New("storage get failed"),
+	}
+
+	deleteOp := keys.NewDeleteKeyOperation().WithStorage(mockStorage)
+	err := deleteOp.Execute(ctx, "test-key")
+	require.Error(t, err)
+
+	var coreErr *coreErrors.Error
+	require.True(t, errors.As(err, &coreErr), "error should be of type *coreErrors.Error")
+	assert.Equal(t, uint64(coreErrors.StorageErrorCode), coreErr.Code)
+}
+
+// TestDeleteKeyOperation_DeleteStorageError tests that storage delete errors are properly propagated.
+func TestDeleteKeyOperation_DeleteStorageError(t *testing.T) {
+	ctx := context.Background()
+
+	keyID := "delete-error-test-key"
+
+	// Create a mock storage with an inline InmemStorage so we can seed a key into it
+	mockStorageForDelete := &mockStorageWithError{
+		InmemStorage: logical.InmemStorage{},
+		deleteErr:    errors.New("storage delete failed"),
+	}
+	seedKey(t, ctx, &mockStorageForDelete.InmemStorage, keyID, crypto.Secp256k1)
+
+	deleteOp := keys.NewDeleteKeyOperation().WithStorage(mockStorageForDelete)
+	err := deleteOp.Execute(ctx, keyID)
+	require.Error(t, err)
+
+	var coreErr *coreErrors.Error
+	require.True(t, errors.As(err, &coreErr), "error should be of type *coreErrors.Error")
+	assert.Equal(t, uint64(coreErrors.StorageErrorCode), coreErr.Code)
+	assert.Contains(t, err.Error(), "failed to delete entry")
 }
