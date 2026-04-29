@@ -68,7 +68,8 @@ func (c *controller) pathKey() *framework.Path {
 		HelpSynopsis:    "Read a private key by ID",
 		HelpDescription: "Read a private key by ID, returning the public key and metadata. The private scalar is never returned.",
 		Operations: map[logical.Operation]framework.OperationHandler{
-			logical.ReadOperation: c.NewReadOperation(),
+			logical.ReadOperation:   c.NewReadOperation(),
+			logical.DeleteOperation: c.NewDeleteOperation(),
 		},
 		Fields: map[string]*framework.FieldSchema{
 			service.IDLabel: service.IDFieldSchema,
@@ -133,6 +134,7 @@ type keysOperations struct {
 	readKey   operations.ReadKeyOperation
 	checkKey  operations.ExistsKeyOperation
 	listKeys  operations.ListKeysOperation
+	deleteKey operations.DeleteKeyOperation
 
 	signHash        signOperations.SignHashOperation
 	signMessage     signOperations.SignMessageOperation
@@ -145,6 +147,7 @@ func newKeysOperations() ControllerOperations {
 		readKey:   operations.NewReadKeyOperation(),
 		checkKey:  operations.NewExistsKeyOperation(),
 		listKeys:  operations.NewListKeysOperation(),
+		deleteKey: operations.NewDeleteKeyOperation(),
 
 		signHash:        signOperations.NewSignHashOperation(),
 		signMessage:     signOperations.NewSignMessageOperation(),
@@ -168,6 +171,10 @@ func (o *keysOperations) ExistsKey() operations.ExistsKeyOperation {
 
 func (o *keysOperations) ListKeys() operations.ListKeysOperation {
 	return o.listKeys
+}
+
+func (o *keysOperations) DeleteKey() operations.DeleteKeyOperation {
+	return o.deleteKey
 }
 
 // SignOperations interface methods

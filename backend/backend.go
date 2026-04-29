@@ -35,9 +35,7 @@ func Backend(c *logical.BackendConfig) *backend {
 		PathsSpecial: &logical.Paths{
 			SealWrapStorage: []string{
 				"wallets/",
-				"sign/",
-				"privateKeys/",
-				"privateKeysTags/",
+				"keys/",
 			},
 		},
 		Paths: framework.PathAppend(

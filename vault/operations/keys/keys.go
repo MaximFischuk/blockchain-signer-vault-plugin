@@ -13,7 +13,7 @@ type KeysOperations interface {
 	CreateKey() CreateKeyOperation
 	ReadKey() ReadKeyOperation
 	ExistsKey() ExistsKeyOperation
-	// DeleteKey() DeleteKeyOperation
+	DeleteKey() DeleteKeyOperation
 	// UpdateKey() UpdateKeyOperation
 	ListKeys() ListKeysOperation
 	// ImportKey() ImportKeyOperation
