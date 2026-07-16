@@ -38,6 +38,7 @@ func (c *controller) Paths() []*framework.Path {
 			c.pathSignHash(),
 			c.pathSignMessage(),
 			c.pathSignBatchHashes(),
+			c.pathSignEthereumTransaction(),
 		},
 	)
 }
@@ -112,6 +113,32 @@ func (c *controller) pathSignMessage() *framework.Path {
 	}
 }
 
+func (c *controller) pathSignEthereumTransaction() *framework.Path {
+	return &framework.Path{
+		Pattern:         "keys/" + framework.GenericNameRegex(service.IDLabel) + "/sign/ethereum/transaction",
+		HelpSynopsis:    "Sign an Ethereum transaction",
+		HelpDescription: "Builds, hashes, and signs a legacy or EIP-1559 Ethereum transaction with the specified secp256k1 key. Returns raw transaction ready for eth_sendRawTransaction.",
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.CreateOperation: c.NewSignEthereumTransactionOperation(),
+			logical.UpdateOperation: c.NewSignEthereumTransactionOperation(),
+		},
+		ExistenceCheck: c.ExistenceCheck(),
+		Fields: map[string]*framework.FieldSchema{
+			service.IDLabel:                   service.IDFieldSchema,
+			service.TransactionTypeLabel:      service.TransactionTypeFieldSchema,
+			service.NonceLabel:                service.NonceFieldSchema,
+			service.ToLabel:                   service.ToFieldSchema,
+			service.AmountLabel:               service.AmountFieldSchema,
+			service.GasLimitLabel:             service.GasLimitFieldSchema,
+			service.ChainIDLabel:              service.ChainIDFieldSchema,
+			service.DataLabel:                 service.DataFieldSchema,
+			service.GasPriceLabel:             service.GasPriceFieldSchema,
+			service.MaxPriorityFeePerGasLabel: service.MaxPriorityFeePerGasFieldSchema,
+			service.MaxFeePerGasLabel:         service.MaxFeePerGasFieldSchema,
+		},
+	}
+}
+
 func (c *controller) pathSignBatchHashes() *framework.Path {
 	return &framework.Path{
 		Pattern:         "keys/" + framework.GenericNameRegex(service.IDLabel) + "/sign/batch",
@@ -136,9 +163,10 @@ type keysOperations struct {
 	listKeys  operations.ListKeysOperation
 	deleteKey operations.DeleteKeyOperation
 
-	signHash        signOperations.SignHashOperation
-	signMessage     signOperations.SignMessageOperation
-	signBatchHashes signOperations.SignBatchHashesOperation
+	signHash                signOperations.SignHashOperation
+	signMessage             signOperations.SignMessageOperation
+	signBatchHashes         signOperations.SignBatchHashesOperation
+	signEthereumTransaction signOperations.SignEthereumTransactionOperation
 }
 
 func newKeysOperations() ControllerOperations {
@@ -149,9 +177,10 @@ func newKeysOperations() ControllerOperations {
 		listKeys:  operations.NewListKeysOperation(),
 		deleteKey: operations.NewDeleteKeyOperation(),
 
-		signHash:        signOperations.NewSignHashOperation(),
-		signMessage:     signOperations.NewSignMessageOperation(),
-		signBatchHashes: signOperations.NewSignBatchHashesOperation(),
+		signHash:                signOperations.NewSignHashOperation(),
+		signMessage:             signOperations.NewSignMessageOperation(),
+		signBatchHashes:         signOperations.NewSignBatchHashesOperation(),
+		signEthereumTransaction: signOperations.NewSignEthereumTransactionOperation(),
 	}
 }
 
@@ -189,4 +218,8 @@ func (o *keysOperations) SignMessage() signOperations.SignMessageOperation {
 
 func (o *keysOperations) SignBatchHashes() signOperations.SignBatchHashesOperation {
 	return o.signBatchHashes
+}
+
+func (o *keysOperations) SignEthereumTransaction() signOperations.SignEthereumTransactionOperation {
+	return o.signEthereumTransaction
 }

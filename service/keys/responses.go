@@ -57,3 +57,12 @@ func SignaturesResponse(signatures []string) *logical.Response {
 		},
 	}
 }
+
+func EthereumTransactionResponse(transactionRaw, transactionHash string) *logical.Response {
+	return &logical.Response{
+		Data: map[string]any{
+			service.SignedTransactionLabel: transactionRaw,
+			service.TransactionHashLabel:   transactionHash,
+		},
+	}
+}

@@ -3,37 +3,42 @@ package service
 import "github.com/hashicorp/vault/sdk/framework"
 
 const (
-	PrivateKeyLabel          = "private_key"
-	IDLabel                  = "id"
-	DataLabel                = "data"
-	NonceLabel               = "nonce"
-	ToLabel                  = "to"
-	AmountLabel              = "amount"
-	GasPriceLabel            = "gas_price"
-	GasLimitLabel            = "gas_limit"
-	ChainIDLabel             = "chain_id"
-	PrivateFromLabel         = "private_from"
-	PrivateForLabel          = "private_for"
-	PrivacyGroupIDLabel      = "privacy_group_id"
-	MetadataLabel            = "metadata"
-	CurveLabel               = "curve"
-	AddressLabel             = "address"
-	PublicKeyLabel           = "public_key"
-	CompressedPublicKeyLabel = "compressed_public_key"
-	NamespaceLabel           = "namespace"
-	SignatureLabel           = "signature"
-	SignaturesLabel          = "signatures"
-	AlgorithmLabel           = "signing_algorithm"
-	VersionLabel             = "version"
-	KeyTypeLabel             = "key_type"
-	CreatedAtLabel           = "created_at"
-	UpdatedAtLabel           = "updated_at"
-	SourceNamespace          = "source_namespace"
-	KeysLabel                = "keys"
-	HashLabel                = "hash"
-	HashesLabel              = "hashes"
-	MessageLabel             = "message"
-	HashFunctionLabel        = "hash_function"
+	PrivateKeyLabel           = "private_key"
+	IDLabel                   = "id"
+	DataLabel                 = "data"
+	NonceLabel                = "nonce"
+	ToLabel                   = "to"
+	AmountLabel               = "amount"
+	GasPriceLabel             = "gas_price"
+	GasLimitLabel             = "gas_limit"
+	ChainIDLabel              = "chain_id"
+	PrivateFromLabel          = "private_from"
+	PrivateForLabel           = "private_for"
+	PrivacyGroupIDLabel       = "privacy_group_id"
+	MetadataLabel             = "metadata"
+	CurveLabel                = "curve"
+	AddressLabel              = "address"
+	PublicKeyLabel            = "public_key"
+	CompressedPublicKeyLabel  = "compressed_public_key"
+	NamespaceLabel            = "namespace"
+	SignatureLabel            = "signature"
+	SignaturesLabel           = "signatures"
+	AlgorithmLabel            = "signing_algorithm"
+	VersionLabel              = "version"
+	KeyTypeLabel              = "key_type"
+	CreatedAtLabel            = "created_at"
+	UpdatedAtLabel            = "updated_at"
+	SourceNamespace           = "source_namespace"
+	KeysLabel                 = "keys"
+	HashLabel                 = "hash"
+	HashesLabel               = "hashes"
+	MessageLabel              = "message"
+	HashFunctionLabel         = "hash_function"
+	TransactionTypeLabel      = "transaction_type"
+	MaxPriorityFeePerGasLabel = "max_priority_fee_per_gas"
+	MaxFeePerGasLabel         = "max_fee_per_gas"
+	SignedTransactionLabel    = "signed_transaction"
+	TransactionHashLabel      = "transaction_hash"
 
 	NamespaceHeader = "X-Vault-Namespace"
 )
@@ -68,8 +73,7 @@ var AmountFieldSchema = &framework.FieldSchema{
 
 var GasPriceFieldSchema = &framework.FieldSchema{
 	Type:        framework.TypeString,
-	Description: "The gas price for the transaction (in wei)",
-	Required:    true,
+	Description: "Legacy transaction gas price (in wei)",
 }
 
 var GasLimitFieldSchema = &framework.FieldSchema{
@@ -86,7 +90,23 @@ var ChainIDFieldSchema = &framework.FieldSchema{
 
 var DataFieldSchema = &framework.FieldSchema{
 	Type:        framework.TypeString,
-	Description: "Data of the transaction",
+	Description: "Transaction calldata in hexadecimal format, with optional 0x prefix",
+}
+
+var TransactionTypeFieldSchema = &framework.FieldSchema{
+	Type:        framework.TypeString,
+	Description: "Ethereum transaction type: legacy or eip1559",
+	Required:    true,
+}
+
+var MaxPriorityFeePerGasFieldSchema = &framework.FieldSchema{
+	Type:        framework.TypeString,
+	Description: "EIP-1559 maximum priority fee per gas (in wei)",
+}
+
+var MaxFeePerGasFieldSchema = &framework.FieldSchema{
+	Type:        framework.TypeString,
+	Description: "EIP-1559 maximum fee per gas (in wei)",
 }
 
 var PrivateFromFieldSchema = &framework.FieldSchema{

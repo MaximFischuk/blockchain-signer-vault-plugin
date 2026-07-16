@@ -30,3 +30,13 @@ func Example200ResponseSignBatch() *framework.Response {
 		}),
 	}
 }
+
+func Example200ResponseSignEthereumTransaction() *framework.Response {
+	return &framework.Response{
+		Description: "Ethereum transaction signed successfully",
+		Example: EthereumTransactionResponse(
+			"0xf86c808504a817c80082520894d8da6bf26964af9d7eed9e03e53415d37aa96045880de0b6b3a76400008025a0b0f06a4f09e750ea473b30ac0d0be8cbec6e37e64be39d21dc4e1ccac4b1c7ca4a7a059a8db13c91c7c8e97b1b0587f3ea3a548645f8c0d739de5d9d90d3495b4c6e940f3",
+			"0x3f44b2c3b6cf3e4c435405f6ec09c7f2a94e7f42d4ab701fb2dd4bf9266c9f3a",
+		),
+	}
+}
