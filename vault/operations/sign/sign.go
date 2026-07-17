@@ -7,6 +7,7 @@ import (
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/sha256"
+	"crypto/sha3"
 	"crypto/sha512"
 	"encoding/hex"
 	"errors"
@@ -25,7 +26,7 @@ import (
 	"github.com/maximfischuk/blockchain-signer-hashicorp-vault-plugin/crypto"
 	"github.com/maximfischuk/blockchain-signer-hashicorp-vault-plugin/vault/entities"
 	"github.com/maximfischuk/blockchain-signer-hashicorp-vault-plugin/vault/storage"
-	"golang.org/x/crypto/sha3"
+	extraSha3 "golang.org/x/crypto/sha3"
 )
 
 type SignOperations interface {
@@ -363,7 +364,7 @@ func hashMessage(message []byte, hashFn HashFunction) ([]byte, error) {
 		digest := sha256.Sum256(message)
 		return digest[:], nil
 	case HashFunctionKeccak256:
-		h := sha3.NewLegacyKeccak256()
+		h := extraSha3.NewLegacyKeccak256()
 		h.Write(message)
 		return h.Sum(nil), nil
 	case HashFunctionSHA512:
@@ -371,7 +372,10 @@ func hashMessage(message []byte, hashFn HashFunction) ([]byte, error) {
 		return digest[:], nil
 	case HashFunctionSHA3256:
 		h := sha3.New256()
-		h.Write(message)
+		_, err := h.Write(message)
+		if err != nil {
+			return nil, fmt.Errorf("failed to hash message with SHA3-256: %w", err)
+		}
 		return h.Sum(nil), nil
 	default:
 		return nil, UnsupportedHashFunctionError(hashFn)
@@ -422,12 +426,10 @@ func signP256(privKeyHex string, hash []byte) (string, error) {
 	}
 
 	curve := elliptic.P256()
-	privKey := &ecdsa.PrivateKey{
-		PublicKey: ecdsa.PublicKey{Curve: curve},
-		D:         new(big.Int).SetBytes(privKeyBytes),
+	privKey, err := ecdsa.ParseRawPrivateKey(curve, privKeyBytes)
+	if err != nil {
+		return "", fmt.Errorf("failed to parse P-256 private key: %w", err)
 	}
-	// TODO: change this to crypto/ecdh due it deprecation in Go 1.20, but it requires a different approach to signing.
-	privKey.PublicKey.X, privKey.PublicKey.Y = curve.ScalarBaseMult(privKeyBytes)
 
 	r, s, err := ecdsa.Sign(rand.Reader, privKey, hash)
 	if err != nil {

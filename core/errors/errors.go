@@ -23,7 +23,7 @@ func (e *Error) GetCode() uint64 {
 }
 
 func (e Error) Error() string {
-	return fmt.Sprintf("%s", e.Message)
+	return e.Message
 }
 
 func MissingFieldError(fieldName string) *Error {
