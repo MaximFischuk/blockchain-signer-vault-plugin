@@ -86,14 +86,14 @@ POST {{vault_address}}/v1/signer/keys/secp256k1/sign/ethereum/transaction
 Content-Type: application/json
 X-Vault-Token: {{vault_dev_token}}
 
-{"transaction_type":"legacy","nonce":0,"to":"0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045","amount":"1000000000000000000","gas_limit":21000,"gas_price":"20000000000","chain_id":"1"}
+{"type":"0x0","nonce":"0x0","to":"0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045","value":"0xde0b6b3a7640000","gas":"0x5208","gasPrice":"0x4a817c800","chainId":"0x1"}
 
 ### Sign EIP-1559 Ethereum tx
 POST {{vault_address}}/v1/signer/keys/secp256k1/sign/ethereum/transaction
 Content-Type: application/json
 X-Vault-Token: {{vault_dev_token}}
 
-{"transaction_type":"eip1559","nonce":0,"to":"0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045","amount":"1000000000000000000","gas_limit":21000,"max_priority_fee_per_gas":"1000000000","max_fee_per_gas":"30000000000","chain_id":"1"}
+{"type":"0x2","nonce":"0x0","to":"0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045","value":"0xde0b6b3a7640000","gas":"0x5208","maxPriorityFeePerGas":"0x3b9aca00","maxFeePerGas":"0x6fc23ac00","chainId":"0x1"}
 
 ### Delete
 DELETE {{vault_address}}/v1/signer/keys/secp256k1

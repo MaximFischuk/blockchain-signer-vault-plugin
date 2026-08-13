@@ -21,7 +21,7 @@ depends = ["image"]
 usage = '''
 flag "--detach" help="Run container in detached mode"
 '''
-run = "docker run --rm -it -p 8200:8200 --name vault-signer vault-signer:latest {% if detach %}-d{% endif %}"
+run = "docker compose -f docker/docker-compose.macos.yaml up {% if detach %}-d{% endif %}"
 
 [tasks.'image:stop']
-run = "docker stop vault-signer"
+run = "docker compose -f docker/docker-compose.macos.yaml down"

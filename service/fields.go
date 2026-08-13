@@ -8,10 +8,10 @@ const (
 	DataLabel                 = "data"
 	NonceLabel                = "nonce"
 	ToLabel                   = "to"
-	AmountLabel               = "amount"
-	GasPriceLabel             = "gas_price"
-	GasLimitLabel             = "gas_limit"
-	ChainIDLabel              = "chain_id"
+	AmountLabel               = "value"
+	GasPriceLabel             = "gasPrice"
+	GasLimitLabel             = "gas"
+	ChainIDLabel              = "chainId"
 	PrivateFromLabel          = "private_from"
 	PrivateForLabel           = "private_for"
 	PrivacyGroupIDLabel       = "privacy_group_id"
@@ -34,9 +34,9 @@ const (
 	HashesLabel               = "hashes"
 	MessageLabel              = "message"
 	HashFunctionLabel         = "hash_function"
-	TransactionTypeLabel      = "transaction_type"
-	MaxPriorityFeePerGasLabel = "max_priority_fee_per_gas"
-	MaxFeePerGasLabel         = "max_fee_per_gas"
+	TransactionTypeLabel      = "type"
+	MaxPriorityFeePerGasLabel = "maxPriorityFeePerGas"
+	MaxFeePerGasLabel         = "maxFeePerGas"
 	SignedTransactionLabel    = "signed_transaction"
 	TransactionHashLabel      = "transaction_hash"
 
@@ -56,8 +56,8 @@ var AddressFieldSchema = &framework.FieldSchema{
 }
 
 var NonceFieldSchema = &framework.FieldSchema{
-	Type:        framework.TypeInt,
-	Description: "Nonce of the transaction",
+	Type:        framework.TypeString,
+	Description: "Transaction nonce as an Ethereum JSON-RPC hexadecimal quantity",
 	Required:    true,
 }
 
@@ -68,23 +68,23 @@ var ToFieldSchema = &framework.FieldSchema{
 
 var AmountFieldSchema = &framework.FieldSchema{
 	Type:        framework.TypeString,
-	Description: "Amount of ETH (in wei) to transfer",
+	Description: "Transaction value in wei as an Ethereum JSON-RPC hexadecimal quantity",
 }
 
 var GasPriceFieldSchema = &framework.FieldSchema{
 	Type:        framework.TypeString,
-	Description: "Legacy transaction gas price (in wei)",
+	Description: "Legacy gas price in wei as an Ethereum JSON-RPC hexadecimal quantity",
 }
 
 var GasLimitFieldSchema = &framework.FieldSchema{
-	Type:        framework.TypeInt,
-	Description: "The gas limit for the transaction",
+	Type:        framework.TypeString,
+	Description: "Transaction gas limit as an Ethereum JSON-RPC hexadecimal quantity",
 	Required:    true,
 }
 
 var ChainIDFieldSchema = &framework.FieldSchema{
 	Type:        framework.TypeString,
-	Description: "Network ID of the chain where the transaction will be deployed",
+	Description: "Chain ID as an Ethereum JSON-RPC hexadecimal quantity",
 	Required:    true,
 }
 
@@ -95,18 +95,18 @@ var DataFieldSchema = &framework.FieldSchema{
 
 var TransactionTypeFieldSchema = &framework.FieldSchema{
 	Type:        framework.TypeString,
-	Description: "Ethereum transaction type: legacy or eip1559",
+	Description: "Ethereum transaction type as a hexadecimal quantity: 0x0 for legacy or 0x2 for EIP-1559",
 	Required:    true,
 }
 
 var MaxPriorityFeePerGasFieldSchema = &framework.FieldSchema{
 	Type:        framework.TypeString,
-	Description: "EIP-1559 maximum priority fee per gas (in wei)",
+	Description: "EIP-1559 maximum priority fee per gas in wei as an Ethereum JSON-RPC hexadecimal quantity",
 }
 
 var MaxFeePerGasFieldSchema = &framework.FieldSchema{
 	Type:        framework.TypeString,
-	Description: "EIP-1559 maximum fee per gas (in wei)",
+	Description: "EIP-1559 maximum fee per gas in wei as an Ethereum JSON-RPC hexadecimal quantity",
 }
 
 var PrivateFromFieldSchema = &framework.FieldSchema{

@@ -82,18 +82,18 @@ type SignBatchHashesOperation interface {
 type EthereumTransactionType string
 
 const (
-	EthereumLegacyTransaction  EthereumTransactionType = "legacy"
-	EthereumEIP1559Transaction EthereumTransactionType = "eip1559"
+	EthereumLegacyTransaction  EthereumTransactionType = "0x0"
+	EthereumEIP1559Transaction EthereumTransactionType = "0x2"
 )
 
-// EthereumTransaction contains common Ethereum transaction fields. Monetary values
-// are decimal wei strings to preserve their full uint256 precision.
+// EthereumTransaction contains eth_signTransaction request fields. Quantities use
+// JSON-RPC hexadecimal encoding.
 type EthereumTransaction struct {
 	Type                 EthereumTransactionType
-	Nonce                uint64
+	Nonce                string
 	To                   string
 	Value                string
-	GasLimit             uint64
+	GasLimit             string
 	ChainID              string
 	Data                 string
 	GasPrice             string
@@ -241,15 +241,23 @@ func (o *signEthereumTransactionOperation) Execute(ctx context.Context, id strin
 		return nil, &InvalidEthereumTransactionError{message: fmt.Sprintf("Ethereum transactions require a secp256k1 key, got %q", key.Curve)}
 	}
 
-	chainID, err := parseEthereumQuantity("chain_id", transaction.ChainID, false)
+	chainID, err := parseEthereumQuantity("chainId", transaction.ChainID, false)
 	if err != nil {
 		return nil, err
 	}
 	if chainID.Sign() <= 0 {
-		return nil, &InvalidEthereumTransactionError{message: "chain_id must be greater than zero"}
+		return nil, &InvalidEthereumTransactionError{message: "chainId must be greater than zero"}
 	}
-	if transaction.GasLimit == 0 {
-		return nil, &InvalidEthereumTransactionError{message: "gas_limit must be greater than zero"}
+	nonce, err := parseEthereumUint64("nonce", transaction.Nonce)
+	if err != nil {
+		return nil, err
+	}
+	gasLimit, err := parseEthereumUint64("gas", transaction.GasLimit)
+	if err != nil {
+		return nil, err
+	}
+	if gasLimit == 0 {
+		return nil, &InvalidEthereumTransactionError{message: "gas must be greater than zero"}
 	}
 	to, err := parseEthereumAddress(transaction.To)
 	if err != nil {
@@ -264,7 +272,7 @@ func (o *signEthereumTransactionOperation) Execute(ctx context.Context, id strin
 		return nil, err
 	}
 
-	unsigned, err := buildEthereumTransaction(transaction, chainID, to, value, data)
+	unsigned, err := buildEthereumTransaction(transaction, chainID, nonce, gasLimit, to, value, data)
 	if err != nil {
 		return nil, err
 	}
@@ -287,27 +295,27 @@ func (o *signEthereumTransactionOperation) Execute(ctx context.Context, id strin
 	}, nil
 }
 
-func buildEthereumTransaction(transaction EthereumTransaction, chainID *big.Int, to *common.Address, value *big.Int, data []byte) (*types.Transaction, error) {
+func buildEthereumTransaction(transaction EthereumTransaction, chainID *big.Int, nonce, gasLimit uint64, to *common.Address, value *big.Int, data []byte) (*types.Transaction, error) {
 	switch EthereumTransactionType(strings.ToLower(string(transaction.Type))) {
 	case EthereumLegacyTransaction:
-		gasPrice, err := parseEthereumQuantity("gas_price", transaction.GasPrice, false)
+		gasPrice, err := parseEthereumQuantity("gasPrice", transaction.GasPrice, false)
 		if err != nil {
 			return nil, err
 		}
-		return types.NewTx(&types.LegacyTx{Nonce: transaction.Nonce, To: to, Value: value, Gas: transaction.GasLimit, GasPrice: gasPrice, Data: data}), nil
+		return types.NewTx(&types.LegacyTx{Nonce: nonce, To: to, Value: value, Gas: gasLimit, GasPrice: gasPrice, Data: data}), nil
 	case EthereumEIP1559Transaction:
-		gasTipCap, err := parseEthereumQuantity("max_priority_fee_per_gas", transaction.MaxPriorityFeePerGas, false)
+		gasTipCap, err := parseEthereumQuantity("maxPriorityFeePerGas", transaction.MaxPriorityFeePerGas, false)
 		if err != nil {
 			return nil, err
 		}
-		gasFeeCap, err := parseEthereumQuantity("max_fee_per_gas", transaction.MaxFeePerGas, false)
+		gasFeeCap, err := parseEthereumQuantity("maxFeePerGas", transaction.MaxFeePerGas, false)
 		if err != nil {
 			return nil, err
 		}
 		if gasFeeCap.Cmp(gasTipCap) < 0 {
-			return nil, &InvalidEthereumTransactionError{message: "max_fee_per_gas must be greater than or equal to max_priority_fee_per_gas"}
+			return nil, &InvalidEthereumTransactionError{message: "maxFeePerGas must be greater than or equal to maxPriorityFeePerGas"}
 		}
-		return types.NewTx(&types.DynamicFeeTx{ChainID: chainID, Nonce: transaction.Nonce, GasTipCap: gasTipCap, GasFeeCap: gasFeeCap, Gas: transaction.GasLimit, To: to, Value: value, Data: data}), nil
+		return types.NewTx(&types.DynamicFeeTx{ChainID: chainID, Nonce: nonce, GasTipCap: gasTipCap, GasFeeCap: gasFeeCap, Gas: gasLimit, To: to, Value: value, Data: data}), nil
 	default:
 		return nil, &InvalidEthereumTransactionError{message: fmt.Sprintf("unsupported Ethereum transaction type: %q", transaction.Type)}
 	}
@@ -317,9 +325,17 @@ func parseEthereumQuantity(field, value string, allowEmpty bool) (*big.Int, erro
 	if value == "" && allowEmpty {
 		return new(big.Int), nil
 	}
-	quantity, ok := new(big.Int).SetString(value, 10)
-	if !ok || quantity.Sign() < 0 {
-		return nil, &InvalidEthereumTransactionError{message: fmt.Sprintf("%s must be a non-negative decimal wei value", field)}
+	quantity, err := hexutil.DecodeBig(value)
+	if err != nil {
+		return nil, &InvalidEthereumTransactionError{message: fmt.Sprintf("%s must be a hexadecimal quantity: %v", field, err)}
+	}
+	return quantity, nil
+}
+
+func parseEthereumUint64(field, value string) (uint64, error) {
+	quantity, err := hexutil.DecodeUint64(value)
+	if err != nil {
+		return 0, &InvalidEthereumTransactionError{message: fmt.Sprintf("%s must be a hexadecimal quantity: %v", field, err)}
 	}
 	return quantity, nil
 }

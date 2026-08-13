@@ -22,12 +22,12 @@ func TestSignEthereumTransactionOperation_Legacy(t *testing.T) {
 
 	signed := signEthereumTransaction(t, ctx, storage, sign.EthereumTransaction{
 		Type:     sign.EthereumLegacyTransaction,
-		Nonce:    7,
+		Nonce:    "0x7",
 		To:       "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045",
-		Value:    "1000000000000000000",
-		GasLimit: 21000,
-		GasPrice: "20000000000",
-		ChainID:  "1",
+		Value:    "0xde0b6b3a7640000",
+		GasLimit: "0x5208",
+		GasPrice: "0x4a817c800",
+		ChainID:  "0x1",
 	})
 
 	transaction := decodeSignedEthereumTransaction(t, signed.RawTransaction)
@@ -45,13 +45,13 @@ func TestSignEthereumTransactionOperation_EIP1559(t *testing.T) {
 
 	signed := signEthereumTransaction(t, ctx, storage, sign.EthereumTransaction{
 		Type:                 sign.EthereumEIP1559Transaction,
-		Nonce:                7,
+		Nonce:                "0x7",
 		To:                   "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045",
-		Value:                "1000000000000000000",
-		GasLimit:             21000,
-		MaxPriorityFeePerGas: "1000000000",
-		MaxFeePerGas:         "20000000000",
-		ChainID:              "1",
+		Value:                "0xde0b6b3a7640000",
+		GasLimit:             "0x5208",
+		MaxPriorityFeePerGas: "0x3b9aca00",
+		MaxFeePerGas:         "0x4a817c800",
+		ChainID:              "0x1",
 		Data:                 "0xdeadbeef",
 	})
 
@@ -75,23 +75,36 @@ func TestSignEthereumTransactionOperation_InvalidEIP1559Fees(t *testing.T) {
 
 	transaction := validLegacyTransaction()
 	transaction.Type = sign.EthereumEIP1559Transaction
-	transaction.MaxPriorityFeePerGas = "20000000000"
-	transaction.MaxFeePerGas = "1000000000"
+	transaction.MaxPriorityFeePerGas = "0x4a817c800"
+	transaction.MaxFeePerGas = "0x3b9aca00"
 
 	_, err := sign.NewSignEthereumTransactionOperation().WithStorage(storage).Execute(ctx, "key1", transaction)
 	require.ErrorAs(t, err, new(*sign.InvalidEthereumTransactionError))
-	assert.Contains(t, err.Error(), "max_fee_per_gas")
+	assert.Contains(t, err.Error(), "maxFeePerGas")
+}
+
+func TestSignEthereumTransactionOperation_RejectsDecimalQuantity(t *testing.T) {
+	ctx := context.Background()
+	storage := logical.Storage(&logical.InmemStorage{})
+	seedSecp256k1Key(t, ctx, storage, "key1")
+
+	transaction := validLegacyTransaction()
+	transaction.GasLimit = "21000"
+
+	_, err := sign.NewSignEthereumTransactionOperation().WithStorage(storage).Execute(ctx, "key1", transaction)
+	require.ErrorAs(t, err, new(*sign.InvalidEthereumTransactionError))
+	assert.Contains(t, err.Error(), "gas")
 }
 
 func validLegacyTransaction() sign.EthereumTransaction {
 	return sign.EthereumTransaction{
 		Type:     sign.EthereumLegacyTransaction,
-		Nonce:    0,
+		Nonce:    "0x0",
 		To:       "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045",
-		Value:    "0",
-		GasLimit: 21000,
-		GasPrice: "20000000000",
-		ChainID:  "1",
+		Value:    "0x0",
+		GasLimit: "0x5208",
+		GasPrice: "0x4a817c800",
+		ChainID:  "0x1",
 	}
 }
 

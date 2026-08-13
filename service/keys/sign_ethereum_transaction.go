@@ -3,7 +3,6 @@ package privatekeys
 import (
 	"context"
 	"errors"
-	"fmt"
 
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -19,18 +18,18 @@ func (c *controller) NewSignEthereumTransactionOperation() *framework.PathOperat
 	return &framework.PathOperation{
 		Callback:    c.signEthereumTransactionHandler(),
 		Summary:     "Sign an Ethereum transaction",
-		Description: "Builds, Keccak-256 hashes, and signs a legacy or EIP-1559 transaction with a secp256k1 key. The returned signed_transaction is 0x-prefixed and ready for eth_sendRawTransaction.",
+		Description: "Signs an eth_signTransaction-compatible legacy or EIP-1559 transaction with a secp256k1 key. All quantities must be 0x-prefixed hexadecimal strings. The returned signed_transaction is ready for eth_sendRawTransaction.",
 		Examples: []framework.RequestExample{
 			{
-				Description: "Sign a legacy Ethereum transfer",
+				Description: "Sign a legacy Ethereum transfer with JSON-RPC transaction fields",
 				Data: map[string]any{
-					service.TransactionTypeLabel: "legacy",
-					service.NonceLabel:           0,
+					service.TransactionTypeLabel: "0x0",
+					service.NonceLabel:           "0x0",
 					service.ToLabel:              "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045",
-					service.AmountLabel:          "1000000000000000000",
-					service.GasLimitLabel:        21000,
-					service.GasPriceLabel:        "20000000000",
-					service.ChainIDLabel:         "1",
+					service.AmountLabel:          "0xde0b6b3a7640000",
+					service.GasLimitLabel:        "0x5208",
+					service.GasPriceLabel:        "0x4a817c800",
+					service.ChainIDLabel:         "0x1",
 				},
 				Response: successExample,
 			},
@@ -51,21 +50,12 @@ func (c *controller) signEthereumTransactionHandler() framework.OperationFunc {
 			return serviceErrors.ErrorResponse(coreErrors.MissingFieldError(service.IDLabel))
 		}
 
-		nonce := data.Get(service.NonceLabel).(int)
-		gasLimit := data.Get(service.GasLimitLabel).(int)
-		if nonce < 0 {
-			return serviceErrors.ErrorResponse(fmt.Errorf("nonce must be non-negative"))
-		}
-		if gasLimit <= 0 {
-			return serviceErrors.ErrorResponse(fmt.Errorf("gas_limit must be greater than zero"))
-		}
-
 		transaction := operations.EthereumTransaction{
 			Type:                 operations.EthereumTransactionType(data.Get(service.TransactionTypeLabel).(string)),
-			Nonce:                uint64(nonce),
+			Nonce:                data.Get(service.NonceLabel).(string),
 			To:                   data.Get(service.ToLabel).(string),
 			Value:                data.Get(service.AmountLabel).(string),
-			GasLimit:             uint64(gasLimit),
+			GasLimit:             data.Get(service.GasLimitLabel).(string),
 			ChainID:              data.Get(service.ChainIDLabel).(string),
 			Data:                 data.Get(service.DataLabel).(string),
 			GasPrice:             data.Get(service.GasPriceLabel).(string),
