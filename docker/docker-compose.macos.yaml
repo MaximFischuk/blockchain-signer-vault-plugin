@@ -1,0 +1,57 @@
+x-container-common: &container-common
+  networks:
+    - vault
+
+services:
+  plugin-init:
+    image: vault-signer:latest
+    entrypoint: ["/bin/sh", "-c"]
+    restart: "no"
+    command:
+      - "cp /vault/plugins/blockchain-signer-vault-plugin /plugins/ && cp /vault/plugins/SHA256SUM /plugins/SHA256SUM && chmod +x /plugins/blockchain-signer-vault-plugin"
+    volumes:
+      - vault-plugins:/plugins
+  vault:
+    <<: *container-common
+    image: hashicorp/vault:2.0.4
+    restart: ${CONTAINER_RESTART-on-failure}
+    post_start:
+      - command: /bin/sh -c "vault plugin register -sha256=$(cat /vault/plugins/SHA256SUM | awk '{print $1}') secret blockchain-signer-vault-plugin"
+      - command: /bin/sh -c "vault secrets enable -path=signer blockchain-signer-vault-plugin"
+    tty: true
+    cap_add:
+      - IPC_LOCK
+    volumes:
+      # - vault-data:/vault/data
+      - vault-plugins:/vault/plugins
+      - ../config/vault.hcl:/vault/config/vault.hcl
+    environment:
+      VAULT_ADDR: http://vault:8200
+      VAULT_DEV_ROOT_TOKEN_ID: ${VAULT_TOKEN-DevVaultToken}
+      VAULT_LOG_LEVEL: debug
+    ports:
+      - 8200:8200
+    depends_on:
+      plugin-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "--spider",
+          "--proxy",
+          "off",
+          "http://localhost:8200/v1/sys/health?standbyok=true",
+        ]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+
+networks:
+  vault:
+    driver: bridge
+volumes:
+  # vault-data:
+  vault-plugins:

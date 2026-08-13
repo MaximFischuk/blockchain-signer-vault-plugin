@@ -1,0 +1,55 @@
+x-container-common: &container-common
+  networks:
+    - vault
+
+services:
+  docker-socket:
+    <<: *container-common
+    image: alpine/socat
+    command: "TCP-LISTEN:2375,fork,reuseaddr UNIX-CONNECT:/var/run/docker.sock"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+  vault:
+    <<: *container-common
+    image: hashicorp/vault:2.0.4
+    restart: ${CONTAINER_RESTART-on-failure}
+    tty: true
+    post_start:
+      - command: /bin/sh -c "vault plugin runtime register -type=container -oci_runtime=runc runc"
+      - command: /bin/sh -c "vault plugin register -runtime=runc -oci_image=vault-signer secret blockchain-signer-vault-plugin"
+      - command: /bin/sh -c "vault secrets enable -path=signer blockchain-signer-vault-plugin"
+    cap_add:
+      - IPC_LOCK
+    volumes:
+      - vault-data:/vault/data
+      - ../config/vault.hcl:/vault/config/vault.hcl
+      - /tmp:/tmp
+    environment:
+      VAULT_ADDR: http://vault:8200
+      VAULT_DEV_ROOT_TOKEN_ID: ${VAULT_TOKEN-DevVaultToken}
+      VAULT_LOG_LEVEL: debug
+      DOCKER_HOST: tcp://docker-socket:2375
+    ports:
+      - 8200:8200
+    depends_on:
+      - docker-socket
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "--spider",
+          "--proxy",
+          "off",
+          "http://localhost:8200/v1/sys/health?standbyok=true",
+        ]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+
+networks:
+  vault:
+    driver: bridge
+volumes:
+  vault-data:

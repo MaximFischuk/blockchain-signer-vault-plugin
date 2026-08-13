@@ -21,20 +21,14 @@ RUN upx --best --lzma blockchain-signer-vault-plugin
 RUN sha256sum -b blockchain-signer-vault-plugin | cut -d' ' -f1 > SHA256SUM
 RUN ls -lh blockchain-signer-vault-plugin SHA256SUM
 
-FROM hashicorp/vault:1.21
+FROM alpine:latest
 
 COPY --from=builder /app/blockchain-signer-vault-plugin /vault/plugins/blockchain-signer-vault-plugin
-# COPY --from=builder /app/SHA256SUM /vault/plugins/SHA256SUM
-COPY --chmod=755 scripts/vault-init-dev.sh /vault-init-dev.sh
-RUN ls -lh /vault/plugins/blockchain-signer-vault-plugin /vault-init-dev.sh
+COPY --from=builder /app/SHA256SUM /vault/plugins/SHA256SUM
 
-RUN apk add bash curl jq
-COPY --chmod=755 <<EOT /entrypoint.sh
-#!/usr/bin/env bash
-set -e
-( sleep 5 ; /vault-init-dev.sh ) & vault server -dev -dev-plugin-dir=/vault/plugins/ -dev-listen-address="0.0.0.0:8200" -dev-root-token-id=DevVaultToken -log-level=trace
-EOT
+RUN apk add --no-cache ca-certificates 
+RUN addgroup -S vault && adduser -S vault -G vault
 
-EXPOSE 8200
+# USER vault
 
-ENTRYPOINT ["/entrypoint.sh"]
+ENTRYPOINT ["/vault/plugins/blockchain-signer-vault-plugin"]

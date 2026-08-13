@@ -1,8 +1,14 @@
+[tasks.upgradedeps]
+run = "go get -u ./..."
+
 [tasks.test]
 run = "go test -v -race -cover ./..."
 
 [tasks.image]
-run = "docker build -t vault-signer:latest ."
+run = [
+    "docker build -t vault-signer:latest -f docker/Dockerfile .",
+    "docker build -t vault-signer:0.0.1 -f docker/Dockerfile .",
+]
 
 [tasks.'image:run']
 depends = ["image"]

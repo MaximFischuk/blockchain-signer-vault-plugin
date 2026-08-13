@@ -1,5 +1,5 @@
 @vault_address = http://localhost:8200
-@vault_dev_token = hvs.Dn5lkjUUcFFnYSB04nQDFljj
+@vault_dev_token = DevVaultToken
 
 ### Keys
 
