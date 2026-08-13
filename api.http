@@ -1,0 +1,100 @@
+@vault_address = http://localhost:8200
+@vault_dev_token = hvs.Dn5lkjUUcFFnYSB04nQDFljj
+
+### Keys
+
+### Create secp256k1
+POST {{vault_address}}/v1/signer/keys
+Content-Type: application/json
+X-Vault-Token: {{vault_dev_token}}
+
+{"id":"secp256k1","curve":"secp256k1","metadata":{"owner":"Alice"}}
+
+### Create ed25519
+POST {{vault_address}}/v1/signer/keys
+Content-Type: application/json
+X-Vault-Token: {{vault_dev_token}}
+
+{"id":"ed25519","curve":"ed25519","metadata":{"owner":"Alice"}}
+
+### Create p256
+POST {{vault_address}}/v1/signer/keys
+Content-Type: application/json
+X-Vault-Token: {{vault_dev_token}}
+
+{"id":"p256","curve":"p256","metadata":{"owner":"Alice"}}
+
+### Create x25519
+POST {{vault_address}}/v1/signer/keys
+Content-Type: application/json
+X-Vault-Token: {{vault_dev_token}}
+
+{"id":"x25519","curve":"x25519","metadata":{"owner":"Alice"}}
+
+### List
+GET {{vault_address}}/v1/signer/keys
+X-Vault-Token: {{vault_dev_token}}
+
+### Read
+GET {{vault_address}}/v1/signer/keys/secp256k1
+X-Vault-Token: {{vault_dev_token}}
+
+### Sign hash
+POST {{vault_address}}/v1/signer/keys/secp256k1/sign/hash
+Content-Type: application/json
+X-Vault-Token: {{vault_dev_token}}
+
+{"hash":"a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3"}
+
+### Sign batch
+POST {{vault_address}}/v1/signer/keys/secp256k1/sign/batch
+Content-Type: application/json
+X-Vault-Token: {{vault_dev_token}}
+
+{"hashes":["a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3","b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9"]}
+
+### Sign message sha256
+POST {{vault_address}}/v1/signer/keys/secp256k1/sign/message
+Content-Type: application/json
+X-Vault-Token: {{vault_dev_token}}
+
+{"message":"68656c6c6f","hash_function":"sha256"}
+
+### Sign message keccak256
+POST {{vault_address}}/v1/signer/keys/secp256k1/sign/message
+Content-Type: application/json
+X-Vault-Token: {{vault_dev_token}}
+
+{"message":"68656c6c6f","hash_function":"keccak256"}
+
+### Sign message sha512
+POST {{vault_address}}/v1/signer/keys/secp256k1/sign/message
+Content-Type: application/json
+X-Vault-Token: {{vault_dev_token}}
+
+{"message":"68656c6c6f","hash_function":"sha512"}
+
+### Sign message sha3-256
+POST {{vault_address}}/v1/signer/keys/secp256k1/sign/message
+Content-Type: application/json
+X-Vault-Token: {{vault_dev_token}}
+
+{"message":"68656c6c6f","hash_function":"sha3-256"}
+
+### Sign legacy Ethereum tx
+POST {{vault_address}}/v1/signer/keys/secp256k1/sign/ethereum/transaction
+Content-Type: application/json
+X-Vault-Token: {{vault_dev_token}}
+
+{"transaction_type":"legacy","nonce":0,"to":"0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045","amount":"1000000000000000000","gas_limit":21000,"gas_price":"20000000000","chain_id":"1"}
+
+### Sign EIP-1559 Ethereum tx
+POST {{vault_address}}/v1/signer/keys/secp256k1/sign/ethereum/transaction
+Content-Type: application/json
+X-Vault-Token: {{vault_dev_token}}
+
+{"transaction_type":"eip1559","nonce":0,"to":"0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045","amount":"1000000000000000000","gas_limit":21000,"max_priority_fee_per_gas":"1000000000","max_fee_per_gas":"30000000000","chain_id":"1"}
+
+### Delete
+DELETE {{vault_address}}/v1/signer/keys/secp256k1
+X-Vault-Token: {{vault_dev_token}}
