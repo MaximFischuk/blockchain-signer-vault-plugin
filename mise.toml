@@ -10,6 +10,12 @@ run = [
     "docker build -t vault-signer:0.0.1 -f docker/Dockerfile .",
 ]
 
+[tasks.format]
+run = "gofmt -s -w ."
+
+[tasks.check]
+run = ["go vet ./...", "golangci-lint run"]
+
 [tasks.'image:run']
 depends = ["image"]
 usage = '''
