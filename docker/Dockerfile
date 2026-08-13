@@ -27,8 +27,5 @@ COPY --from=builder /app/blockchain-signer-vault-plugin /vault/plugins/blockchai
 COPY --from=builder /app/SHA256SUM /vault/plugins/SHA256SUM
 
 RUN apk add --no-cache ca-certificates 
-RUN addgroup -S vault && adduser -S vault -G vault
-
-# USER vault
 
 ENTRYPOINT ["/vault/plugins/blockchain-signer-vault-plugin"]
