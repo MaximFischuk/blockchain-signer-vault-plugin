@@ -1,3 +1,6 @@
+[env]
+PROJECT_NAME = "bc-signer"
+
 [tasks.upgradedeps]
 run = "go get -u ./..."
 
@@ -16,12 +19,18 @@ run = "gofmt -s -w ."
 [tasks.check]
 run = ["go vet ./...", "golangci-lint run"]
 
-[tasks.'image:run']
+[tasks.'service:run']
 depends = ["image"]
 usage = '''
 flag "--detach" help="Run container in detached mode"
 '''
-run = "docker compose -f docker/docker-compose.macos.yaml up {% if detach %}-d{% endif %}"
+run = "docker compose -p ${PROJECT_NAME} -f docker/docker-compose.macos.yaml up {% if detach %}-d{% endif %}"
 
-[tasks.'image:stop']
-run = "docker compose -f docker/docker-compose.macos.yaml down"
+[tasks.'service:stop']
+run = "docker compose -p ${PROJECT_NAME} -f docker/docker-compose.macos.yaml stop"
+
+[tasks.'service:down']
+run = [
+    "docker compose -p ${PROJECT_NAME} -f docker/docker-compose.macos.yaml down",
+    "docker volume rm ${PROJECT_NAME}_vault-plugins",
+]

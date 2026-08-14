@@ -39,6 +39,7 @@ func (c *controller) Paths() []*framework.Path {
 			c.pathSignMessage(),
 			c.pathSignBatchHashes(),
 			c.pathSignEthereumTransaction(),
+			c.pathSignEthereumTypedData(),
 		},
 	)
 }
@@ -139,6 +140,26 @@ func (c *controller) pathSignEthereumTransaction() *framework.Path {
 	}
 }
 
+func (c *controller) pathSignEthereumTypedData() *framework.Path {
+	return &framework.Path{
+		Pattern:         "keys/" + framework.GenericNameRegex(service.IDLabel) + "/sign/ethereum/typed-data",
+		HelpSynopsis:    "Sign EIP-712 typed data",
+		HelpDescription: "Signs an eth_signTypedData_v4-compatible EIP-712 message with the specified secp256k1 key.",
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.CreateOperation: c.NewSignEthereumTypedDataOperation(),
+			logical.UpdateOperation: c.NewSignEthereumTypedDataOperation(),
+		},
+		ExistenceCheck: c.ExistenceCheck(),
+		Fields: map[string]*framework.FieldSchema{
+			service.IDLabel:                service.IDFieldSchema,
+			service.EIP712TypesLabel:       service.EIP712TypesFieldSchema,
+			service.EIP712PrimaryTypeLabel: service.EIP712PrimaryTypeFieldSchema,
+			service.EIP712DomainLabel:      service.EIP712DomainFieldSchema,
+			service.MessageLabel:           service.EIP712MessageFieldSchema,
+		},
+	}
+}
+
 func (c *controller) pathSignBatchHashes() *framework.Path {
 	return &framework.Path{
 		Pattern:         "keys/" + framework.GenericNameRegex(service.IDLabel) + "/sign/batch",
@@ -167,6 +188,7 @@ type keysOperations struct {
 	signMessage             signOperations.SignMessageOperation
 	signBatchHashes         signOperations.SignBatchHashesOperation
 	signEthereumTransaction signOperations.SignEthereumTransactionOperation
+	signEthereumTypedData   signOperations.SignEthereumTypedDataOperation
 }
 
 func newKeysOperations() ControllerOperations {
@@ -181,6 +203,7 @@ func newKeysOperations() ControllerOperations {
 		signMessage:             signOperations.NewSignMessageOperation(),
 		signBatchHashes:         signOperations.NewSignBatchHashesOperation(),
 		signEthereumTransaction: signOperations.NewSignEthereumTransactionOperation(),
+		signEthereumTypedData:   signOperations.NewSignEthereumTypedDataOperation(),
 	}
 }
 
@@ -222,4 +245,8 @@ func (o *keysOperations) SignBatchHashes() signOperations.SignBatchHashesOperati
 
 func (o *keysOperations) SignEthereumTransaction() signOperations.SignEthereumTransactionOperation {
 	return o.signEthereumTransaction
+}
+
+func (o *keysOperations) SignEthereumTypedData() signOperations.SignEthereumTypedDataOperation {
+	return o.signEthereumTypedData
 }

@@ -39,6 +39,9 @@ const (
 	MaxFeePerGasLabel         = "maxFeePerGas"
 	SignedTransactionLabel    = "signed_transaction"
 	TransactionHashLabel      = "transaction_hash"
+	EIP712TypesLabel          = "types"
+	EIP712PrimaryTypeLabel    = "primaryType"
+	EIP712DomainLabel         = "domain"
 
 	NamespaceHeader = "X-Vault-Namespace"
 )
@@ -157,5 +160,29 @@ var MessageFieldSchema = &framework.FieldSchema{
 var HashFunctionFieldSchema = &framework.FieldSchema{
 	Type:        framework.TypeString,
 	Description: "Hash function to apply to the message before signing (sha256, keccak256, sha512, sha3-256)",
+	Required:    true,
+}
+
+var EIP712TypesFieldSchema = &framework.FieldSchema{
+	Type:        framework.TypeMap,
+	Description: "EIP-712 type definitions",
+	Required:    true,
+}
+
+var EIP712PrimaryTypeFieldSchema = &framework.FieldSchema{
+	Type:        framework.TypeString,
+	Description: "EIP-712 primary type",
+	Required:    true,
+}
+
+var EIP712DomainFieldSchema = &framework.FieldSchema{
+	Type:        framework.TypeMap,
+	Description: "EIP-712 signing domain",
+	Required:    true,
+}
+
+var EIP712MessageFieldSchema = &framework.FieldSchema{
+	Type:        framework.TypeMap,
+	Description: "EIP-712 typed message",
 	Required:    true,
 }

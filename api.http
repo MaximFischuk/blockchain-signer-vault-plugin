@@ -86,14 +86,68 @@ POST {{vault_address}}/v1/signer/keys/secp256k1/sign/ethereum/transaction
 Content-Type: application/json
 X-Vault-Token: {{vault_dev_token}}
 
-{"type":"0x0","nonce":"0x0","to":"0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045","value":"0xde0b6b3a7640000","gas":"0x5208","gasPrice":"0x4a817c800","chainId":"0x1"}
+{
+    "type": "0x0",
+    "nonce": "0x0",
+    "to": "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045",
+    "value": "0xde0b6b3a7640000",
+    "gas": "0x5208",
+    "gasPrice": "0x4a817c800",
+    "chainId": "0x1"
+}
 
 ### Sign EIP-1559 Ethereum tx
 POST {{vault_address}}/v1/signer/keys/secp256k1/sign/ethereum/transaction
 Content-Type: application/json
 X-Vault-Token: {{vault_dev_token}}
 
-{"type":"0x2","nonce":"0x0","to":"0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045","value":"0xde0b6b3a7640000","gas":"0x5208","maxPriorityFeePerGas":"0x3b9aca00","maxFeePerGas":"0x6fc23ac00","chainId":"0x1"}
+{
+    "type": "0x2",
+    "nonce": "0x0",
+    "to": "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045",
+    "value": "0xde0b6b3a7640000",
+    "gas": "0x5208",
+    "maxPriorityFeePerGas": "0x3b9aca00",
+    "maxFeePerGas": "0x6fc23ac00",
+    "chainId": "0x1"
+}
+
+### Sign EIP-712 typed data
+POST {{vault_address}}/v1/signer/keys/secp256k1/sign/ethereum/typed-data
+Content-Type: application/json
+X-Vault-Token: {{vault_dev_token}}
+
+{
+	"types": {
+		"EIP712Domain": [
+			{"name": "name", "type": "string"},
+			{"name": "version", "type": "string"},
+			{"name": "chainId", "type": "uint256"},
+			{"name": "verifyingContract", "type": "address"}
+		],
+		"Person": [
+			{"name": "name", "type": "string"},
+			{"name": "wallet", "type": "address"}
+		],
+		"Mail": [
+			{"name": "from", "type": "Person"},
+			{"name": "to", "type": "Person"},
+			{"name": "contents", "type": "string"}
+		]
+	},
+	"primaryType": "Mail",
+	"domain": {
+		"name": "Ether Mail",
+		"version": "1",
+		"chainId": 1,
+		"verifyingContract": "0xCcCCccccCCCCcCCCCCCcCcCccCcCCCcCcccccccC"
+	},
+	"message": {
+		"from": {"name": "Cow", "wallet": "0xCD2a3d9F938E13CD947Ec05AbC7FE734Df8DD826"},
+		"to": {"name": "Bob", "wallet": "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB"},
+		"contents": "Hello, Bob!"
+	}
+}
 
 ### Delete
 DELETE {{vault_address}}/v1/signer/keys/secp256k1
