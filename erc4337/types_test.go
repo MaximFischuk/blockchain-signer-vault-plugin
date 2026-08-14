@@ -1,14 +1,97 @@
 package erc4337
 
 import (
+	"encoding/json"
 	"math/big"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	ethereumCrypto "github.com/ethereum/go-ethereum/crypto"
 	"github.com/stretchr/testify/require"
 )
+
+func TestRequestUserOperationToUserOperation(t *testing.T) {
+	factory := common.HexToAddress("0xfA00000000000000000000000000000000000001")
+	paymaster := common.HexToAddress("0xPa00000000000000000000000000000000000001")
+	request := RequestUserOperation{
+		Sender:                        common.HexToAddress("0x9f22F7C0c9D5a27881D1b4A29d14A7F88547DdbD"),
+		Nonce:                         hexBig(7),
+		Factory:                       &factory,
+		FactoryData:                   hexutil.Bytes{0xca, 0xfe},
+		CallData:                      hexutil.Bytes{0xde, 0xad},
+		CallGasLimit:                  hexBig(2),
+		VerificationGasLimit:          hexBig(1),
+		PreVerificationGas:            hexBig(50_000),
+		MaxPriorityFeePerGas:          hexBig(3),
+		MaxFeePerGas:                  hexBig(4),
+		Paymaster:                     &paymaster,
+		PaymasterVerificationGasLimit: hexBig(5),
+		PaymasterPostOpGasLimit:       hexBig(6),
+		PaymasterData:                 hexutil.Bytes{0xbe, 0xef},
+	}
+
+	userOperation, err := request.ToUserOperation()
+	require.NoError(t, err)
+	require.Equal(t, request.Sender, userOperation.Sender)
+	require.Equal(t, big.NewInt(7), userOperation.Nonce)
+	require.Equal(t, append(factory.Bytes(), request.FactoryData...), userOperation.InitCode)
+	require.Equal(t, []byte{0xde, 0xad}, userOperation.CallData)
+	require.Equal(t, common.HexToHash("0x0000000000000000000000000000000100000000000000000000000000000002"), userOperation.AccountGasLimits)
+	require.Equal(t, big.NewInt(50_000), userOperation.PreVerificationGas)
+	require.Equal(t, common.HexToHash("0x0000000000000000000000000000000300000000000000000000000000000004"), userOperation.GasFees)
+	expectedPaymasterAndData := append(paymaster.Bytes(), make([]byte, 15)...)
+	expectedPaymasterAndData = append(expectedPaymasterAndData, 5)
+	expectedPaymasterAndData = append(expectedPaymasterAndData, make([]byte, 15)...)
+	expectedPaymasterAndData = append(expectedPaymasterAndData, 6, 0xbe, 0xef)
+	require.Equal(t, expectedPaymasterAndData, userOperation.PaymasterAndData)
+	require.Nil(t, userOperation.Signature)
+}
+
+func TestRequestUserOperationToUserOperationRejectsGasLimitOverUint128(t *testing.T) {
+	request := RequestUserOperation{
+		Nonce:                hexBig(0),
+		CallGasLimit:         hexBig(1),
+		VerificationGasLimit: (*hexutil.Big)(new(big.Int).Lsh(big.NewInt(1), 128)),
+		PreVerificationGas:   hexBig(0),
+		MaxFeePerGas:         hexBig(0),
+		MaxPriorityFeePerGas: hexBig(0),
+	}
+
+	_, err := request.ToUserOperation()
+	require.EqualError(t, err, "verificationGasLimit must be an unsigned uint128")
+}
+
+func hexBig(value int64) *hexutil.Big {
+	return (*hexutil.Big)(big.NewInt(value))
+}
+
+func TestRequestUserOperationJSON(t *testing.T) {
+	request := RequestUserOperation{
+		Sender:               common.HexToAddress("0x9f22F7C0c9D5a27881D1b4A29d14A7F88547DdbD"),
+		Nonce:                hexBig(7),
+		CallData:             hexutil.Bytes{0xca, 0xfe},
+		CallGasLimit:         hexBig(1),
+		VerificationGasLimit: hexBig(2),
+		PreVerificationGas:   hexBig(3),
+		MaxFeePerGas:         hexBig(4),
+		MaxPriorityFeePerGas: hexBig(5),
+	}
+
+	encoded, err := json.Marshal(request)
+	require.NoError(t, err)
+	require.JSONEq(t, `{
+		"sender": "0x9f22f7c0c9d5a27881d1b4a29d14a7f88547ddbd",
+		"nonce": "0x7",
+		"callData": "0xcafe",
+		"callGasLimit": "0x1",
+		"verificationGasLimit": "0x2",
+		"preVerificationGas": "0x3",
+		"maxFeePerGas": "0x4",
+		"maxPriorityFeePerGas": "0x5"
+	}`, string(encoded))
+}
 
 func TestHashUserOperationV07(t *testing.T) {
 	userOperation := testUserOperation()

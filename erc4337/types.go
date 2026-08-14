@@ -8,6 +8,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	ethereumMath "github.com/ethereum/go-ethereum/common/math"
 	ethereumCrypto "github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/signer/core/apitypes"
@@ -51,6 +52,65 @@ type UserOperation struct {
 	GasFees            common.Hash
 	PaymasterAndData   []byte
 	Signature          []byte
+}
+
+// RequestUserOperation is eth_sendUserOperation's ERC-7769 request payload.
+// EIP-7702 authorization and signature fields are intentionally excluded.
+type RequestUserOperation struct {
+	Sender                        common.Address  `json:"sender"`
+	Nonce                         *hexutil.Big    `json:"nonce"`
+	Factory                       *common.Address `json:"factory,omitempty"`
+	FactoryData                   hexutil.Bytes   `json:"factoryData,omitempty"`
+	CallData                      hexutil.Bytes   `json:"callData"`
+	CallGasLimit                  *hexutil.Big    `json:"callGasLimit"`
+	VerificationGasLimit          *hexutil.Big    `json:"verificationGasLimit"`
+	PreVerificationGas            *hexutil.Big    `json:"preVerificationGas"`
+	MaxFeePerGas                  *hexutil.Big    `json:"maxFeePerGas"`
+	MaxPriorityFeePerGas          *hexutil.Big    `json:"maxPriorityFeePerGas"`
+	Paymaster                     *common.Address `json:"paymaster,omitempty"`
+	PaymasterVerificationGasLimit *hexutil.Big    `json:"paymasterVerificationGasLimit,omitempty"`
+	PaymasterPostOpGasLimit       *hexutil.Big    `json:"paymasterPostOpGasLimit,omitempty"`
+	PaymasterData                 hexutil.Bytes   `json:"paymasterData,omitempty"`
+}
+
+// ToUserOperation packs an ERC-7769 request into EntryPoint's packed format.
+func (request RequestUserOperation) ToUserOperation() (UserOperation, error) {
+	for name, value := range map[string]*hexutil.Big{
+		"nonce":                request.Nonce,
+		"callGasLimit":         request.CallGasLimit,
+		"verificationGasLimit": request.VerificationGasLimit,
+		"preVerificationGas":   request.PreVerificationGas,
+		"maxFeePerGas":         request.MaxFeePerGas,
+		"maxPriorityFeePerGas": request.MaxPriorityFeePerGas,
+	} {
+		if value == nil {
+			return UserOperation{}, fmt.Errorf("%s is required", name)
+		}
+	}
+
+	accountGasLimits, err := packUint128Pair("verificationGasLimit", (*big.Int)(request.VerificationGasLimit), "callGasLimit", (*big.Int)(request.CallGasLimit))
+	if err != nil {
+		return UserOperation{}, err
+	}
+	gasFees, err := packUint128Pair("maxPriorityFeePerGas", (*big.Int)(request.MaxPriorityFeePerGas), "maxFeePerGas", (*big.Int)(request.MaxFeePerGas))
+	if err != nil {
+		return UserOperation{}, err
+	}
+	paymasterAndData, err := packPaymasterAndData(request)
+	if err != nil {
+		return UserOperation{}, err
+	}
+
+	return UserOperation{
+		Sender:             request.Sender,
+		Nonce:              (*big.Int)(request.Nonce),
+		InitCode:           packInitCode(request.Factory, request.FactoryData),
+		CallData:           request.CallData,
+		AccountGasLimits:   common.BytesToHash(accountGasLimits[:]),
+		PreVerificationGas: (*big.Int)(request.PreVerificationGas),
+		GasFees:            common.BytesToHash(gasFees[:]),
+		PaymasterAndData:   paymasterAndData,
+	}, nil
 }
 
 // HashUserOperationV07 returns EntryPoint v0.7's canonical user operation hash.
@@ -192,4 +252,53 @@ func mustABIArguments(types ...string) abi.Arguments {
 		arguments[index] = abi.Argument{Type: abiType}
 	}
 	return arguments
+}
+
+func packInitCode(factory *common.Address, factoryData []byte) []byte {
+	if factory == nil {
+		return nil
+	}
+	return append(factory.Bytes(), factoryData...)
+}
+
+func packPaymasterAndData(request RequestUserOperation) ([]byte, error) {
+	if request.Paymaster == nil {
+		return nil, nil
+	}
+	verificationGasLimit := big.NewInt(0)
+	if request.PaymasterVerificationGasLimit != nil {
+		verificationGasLimit = (*big.Int)(request.PaymasterVerificationGasLimit)
+	}
+	postOpGasLimit := big.NewInt(0)
+	if request.PaymasterPostOpGasLimit != nil {
+		postOpGasLimit = (*big.Int)(request.PaymasterPostOpGasLimit)
+	}
+	gasLimits, err := packUint128Pair("paymasterVerificationGasLimit", verificationGasLimit, "paymasterPostOpGasLimit", postOpGasLimit)
+	if err != nil {
+		return nil, err
+	}
+	return append(append(request.Paymaster.Bytes(), gasLimits[:]...), request.PaymasterData...), nil
+}
+
+func packUint128Pair(leftName string, left *big.Int, rightName string, right *big.Int) ([32]byte, error) {
+	var packed [32]byte
+	if err := validateUint128(leftName, left); err != nil {
+		return packed, err
+	}
+	if err := validateUint128(rightName, right); err != nil {
+		return packed, err
+	}
+	left.FillBytes(packed[:16])
+	right.FillBytes(packed[16:])
+	return packed, nil
+}
+
+func validateUint128(name string, value *big.Int) error {
+	if value == nil {
+		return fmt.Errorf("%s is required", name)
+	}
+	if value.Sign() < 0 || value.BitLen() > 128 {
+		return fmt.Errorf("%s must be an unsigned uint128", name)
+	}
+	return nil
 }
