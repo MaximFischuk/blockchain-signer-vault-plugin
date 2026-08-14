@@ -47,3 +47,10 @@ func Example200ResponseSignEthereumTypedData() *framework.Response {
 		Example:     SignatureResponse("0x49b4b5a4f8b3c2e1d0a9f8e7d6c5b4a3f2e1d0c9b8a7f6e5d4c3b2a1f0e9d8c71a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b1b"),
 	}
 }
+
+func Example200ResponseSignEthereumUserOperation() *framework.Response {
+	return &framework.Response{
+		Description: "ERC-4337 UserOperation signed successfully",
+		Example:     SignatureResponse("0x49b4b5a4f8b3c2e1d0a9f8e7d6c5b4a3f2e1d0c9b8a7f6e5d4c3b2a1f0e9d8c71a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b1b"),
+	}
+}

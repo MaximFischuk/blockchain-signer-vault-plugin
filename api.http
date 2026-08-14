@@ -149,6 +149,52 @@ X-Vault-Token: {{vault_dev_token}}
 	}
 }
 
+### Sign ERC-4337 UserOperation
+POST {{vault_address}}/v1/signer/keys/secp256k1/sign/ethereum/user-operation
+Content-Type: application/json
+X-Vault-Token: {{vault_dev_token}}
+
+{
+	"userOperation": {
+		"sender": "0x9f22F7C0c9D5a27881D1b4A29d14A7F88547DdbD",
+		"nonce": "0x7",
+		"callData": "0xcafebabe",
+		"callGasLimit": "0x249f0",
+		"verificationGasLimit": "0x186a0",
+		"preVerificationGas": "0xc350",
+		"maxPriorityFeePerGas": "0x64",
+		"maxFeePerGas": "0x3e8"
+	},
+	"entryPoint": "0x0000000071727De22E5E9d8bAF0edAc6f37da032",
+	"entryPointVersion": "0.8",
+	"chainId": "0x1"
+}
+
+### Sign ERC-4337 UserOperation with paymaster
+POST {{vault_address}}/v1/signer/keys/secp256k1/sign/ethereum/user-operation
+Content-Type: application/json
+X-Vault-Token: {{vault_dev_token}}
+
+{
+	"userOperation": {
+		"sender": "0x9f22F7C0c9D5a27881D1b4A29d14A7F88547DdbD",
+		"nonce": "0x7",
+		"callData": "0xcafebabe",
+		"callGasLimit": "0x249f0",
+		"verificationGasLimit": "0x186a0",
+		"preVerificationGas": "0xc350",
+		"maxPriorityFeePerGas": "0x64",
+		"maxFeePerGas": "0x3e8",
+		"paymaster": "0x0000000000000000000000000000000000000001",
+		"paymasterVerificationGasLimit": "0xc350",
+		"paymasterPostOpGasLimit": "0x7530",
+		"paymasterData": "0xdeadbeef"
+	},
+	"entryPoint": "0x0000000071727De22E5E9d8bAF0edAc6f37da032",
+	"entryPointVersion": "0.8",
+	"chainId": "0x1"
+}
+
 ### Delete
 DELETE {{vault_address}}/v1/signer/keys/secp256k1
 X-Vault-Token: {{vault_dev_token}}

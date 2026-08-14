@@ -40,6 +40,7 @@ func (c *controller) Paths() []*framework.Path {
 			c.pathSignBatchHashes(),
 			c.pathSignEthereumTransaction(),
 			c.pathSignEthereumTypedData(),
+			c.pathSignEthereumUserOperation(),
 		},
 	)
 }
@@ -160,6 +161,26 @@ func (c *controller) pathSignEthereumTypedData() *framework.Path {
 	}
 }
 
+func (c *controller) pathSignEthereumUserOperation() *framework.Path {
+	return &framework.Path{
+		Pattern:         "keys/" + framework.GenericNameRegex(service.IDLabel) + "/sign/ethereum/user-operation",
+		HelpSynopsis:    "Sign an ERC-4337 UserOperation",
+		HelpDescription: "Hashes and signs an ERC-7769 UserOperation using the specified EntryPoint version and a secp256k1 key.",
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.CreateOperation: c.NewSignEthereumUserOperationOperation(),
+			logical.UpdateOperation: c.NewSignEthereumUserOperationOperation(),
+		},
+		ExistenceCheck: c.ExistenceCheck(),
+		Fields: map[string]*framework.FieldSchema{
+			service.IDLabel:                service.IDFieldSchema,
+			service.UserOperationLabel:     service.UserOperationFieldSchema,
+			service.EntryPointLabel:        service.EntryPointFieldSchema,
+			service.EntryPointVersionLabel: service.EntryPointVersionFieldSchema,
+			service.ChainIDLabel:           service.ChainIDFieldSchema,
+		},
+	}
+}
+
 func (c *controller) pathSignBatchHashes() *framework.Path {
 	return &framework.Path{
 		Pattern:         "keys/" + framework.GenericNameRegex(service.IDLabel) + "/sign/batch",
@@ -189,6 +210,7 @@ type keysOperations struct {
 	signBatchHashes         signOperations.SignBatchHashesOperation
 	signEthereumTransaction signOperations.SignEthereumTransactionOperation
 	signEthereumTypedData   signOperations.SignEthereumTypedDataOperation
+	signEthereumUserOp      signOperations.SignEthereumUserOperationOperation
 }
 
 func newKeysOperations() ControllerOperations {
@@ -204,6 +226,7 @@ func newKeysOperations() ControllerOperations {
 		signBatchHashes:         signOperations.NewSignBatchHashesOperation(),
 		signEthereumTransaction: signOperations.NewSignEthereumTransactionOperation(),
 		signEthereumTypedData:   signOperations.NewSignEthereumTypedDataOperation(),
+		signEthereumUserOp:      signOperations.NewSignEthereumUserOperationOperation(),
 	}
 }
 
@@ -249,4 +272,8 @@ func (o *keysOperations) SignEthereumTransaction() signOperations.SignEthereumTr
 
 func (o *keysOperations) SignEthereumTypedData() signOperations.SignEthereumTypedDataOperation {
 	return o.signEthereumTypedData
+}
+
+func (o *keysOperations) SignEthereumUserOperation() signOperations.SignEthereumUserOperationOperation {
+	return o.signEthereumUserOp
 }

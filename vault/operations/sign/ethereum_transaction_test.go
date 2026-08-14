@@ -12,6 +12,7 @@ import (
 	ethereumCrypto "github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/signer/core/apitypes"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/maximfischuk/blockchain-signer-hashicorp-vault-plugin/erc4337"
 	sign "github.com/maximfischuk/blockchain-signer-hashicorp-vault-plugin/vault/operations/sign"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -137,6 +138,66 @@ func TestSignEthereumTypedDataOperation_InvalidTypedData(t *testing.T) {
 	require.ErrorAs(t, err, new(*sign.InvalidEthereumTypedDataError))
 }
 
+func TestSignEthereumUserOperationOperation(t *testing.T) {
+	ctx := context.Background()
+	storage := logical.Storage(&logical.InmemStorage{})
+	privateKeyHex := seedSecp256k1Key(t, ctx, storage, "key1")
+	request := validUserOperation(t)
+	entryPoint := "0x0000000071727De22E5E9d8bAF0edAc6f37da032"
+
+	for _, version := range []sign.EntryPointVersion{
+		sign.EntryPointVersion07,
+		sign.EntryPointVersion08,
+		sign.EntryPointVersion09,
+	} {
+		t.Run(string(version), func(t *testing.T) {
+			signature, err := sign.NewSignEthereumUserOperationOperation().WithStorage(storage).Execute(ctx, "key1", request, entryPoint, version, "0x1")
+			require.NoError(t, err)
+
+			userOperation, err := request.ToUserOperation()
+			require.NoError(t, err)
+			chainID := big.NewInt(1)
+			var digest common.Hash
+			switch version {
+			case sign.EntryPointVersion07:
+				digest, err = erc4337.HashUserOperationV07(userOperation, common.HexToAddress(entryPoint), chainID)
+			case sign.EntryPointVersion08:
+				digest, err = erc4337.HashUserOperationV08(userOperation, common.HexToAddress(entryPoint), chainID)
+			case sign.EntryPointVersion09:
+				digest, err = erc4337.HashUserOperationV09(userOperation, common.HexToAddress(entryPoint), chainID)
+			}
+			require.NoError(t, err)
+
+			signatureBytes := common.FromHex(signature)
+			require.Len(t, signatureBytes, 65)
+			signatureBytes[64] -= 27
+			publicKey, err := ethereumCrypto.SigToPub(digest.Bytes(), signatureBytes)
+			require.NoError(t, err)
+
+			privateKey, err := ethereumCrypto.HexToECDSA(privateKeyHex)
+			require.NoError(t, err)
+			assert.Equal(t, ethereumCrypto.PubkeyToAddress(privateKey.PublicKey), ethereumCrypto.PubkeyToAddress(*publicKey))
+		})
+	}
+}
+
+func TestSignEthereumUserOperationOperation_UnsupportedEntryPointVersion(t *testing.T) {
+	ctx := context.Background()
+	storage := logical.Storage(&logical.InmemStorage{})
+	seedSecp256k1Key(t, ctx, storage, "key1")
+
+	_, err := sign.NewSignEthereumUserOperationOperation().WithStorage(storage).Execute(
+		ctx,
+		"key1",
+		validUserOperation(t),
+		"0x0000000071727De22E5E9d8bAF0edAc6f37da032",
+		"1.0",
+		"0x1",
+	)
+	require.ErrorAs(t, err, new(*sign.InvalidEthereumUserOperationError))
+	assert.Contains(t, err.Error(), "unsupported EntryPoint version")
+}
+
 func validLegacyTransaction() sign.EthereumTransaction {
 	return sign.EthereumTransaction{
 		Type:     sign.EthereumLegacyTransaction,
@@ -147,6 +208,23 @@ func validLegacyTransaction() sign.EthereumTransaction {
 		GasPrice: "0x4a817c800",
 		ChainID:  "0x1",
 	}
+}
+
+func validUserOperation(t *testing.T) erc4337.RequestUserOperation {
+	t.Helper()
+
+	var request erc4337.RequestUserOperation
+	require.NoError(t, json.Unmarshal([]byte(`{
+		"sender": "0x9f22F7C0c9D5a27881D1b4A29d14A7F88547DdbD",
+		"nonce": "0x7",
+		"callData": "0xcafebabe",
+		"callGasLimit": "0x249f0",
+		"verificationGasLimit": "0x186a0",
+		"preVerificationGas": "0xc350",
+		"maxPriorityFeePerGas": "0x64",
+		"maxFeePerGas": "0x3e8"
+	}`), &request))
+	return request
 }
 
 func signEthereumTransaction(t *testing.T, ctx context.Context, storage logical.Storage, transaction sign.EthereumTransaction) *sign.SignedEthereumTransaction {

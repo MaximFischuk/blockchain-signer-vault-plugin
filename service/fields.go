@@ -42,6 +42,9 @@ const (
 	EIP712TypesLabel          = "types"
 	EIP712PrimaryTypeLabel    = "primaryType"
 	EIP712DomainLabel         = "domain"
+	UserOperationLabel        = "userOperation"
+	EntryPointLabel           = "entryPoint"
+	EntryPointVersionLabel    = "entryPointVersion"
 
 	NamespaceHeader = "X-Vault-Namespace"
 )
@@ -184,5 +187,23 @@ var EIP712DomainFieldSchema = &framework.FieldSchema{
 var EIP712MessageFieldSchema = &framework.FieldSchema{
 	Type:        framework.TypeMap,
 	Description: "EIP-712 typed message",
+	Required:    true,
+}
+
+var UserOperationFieldSchema = &framework.FieldSchema{
+	Type:        framework.TypeMap,
+	Description: "ERC-7769 UserOperation request payload",
+	Required:    true,
+}
+
+var EntryPointFieldSchema = &framework.FieldSchema{
+	Type:        framework.TypeString,
+	Description: "EntryPoint contract address",
+	Required:    true,
+}
+
+var EntryPointVersionFieldSchema = &framework.FieldSchema{
+	Type:        framework.TypeString,
+	Description: "EntryPoint version: 0.7, 0.8, or 0.9",
 	Required:    true,
 }
