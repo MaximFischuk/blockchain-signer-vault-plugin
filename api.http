@@ -24,13 +24,6 @@ X-Vault-Token: {{vault_dev_token}}
 
 {"id":"p256","curve":"p256","metadata":{"owner":"Alice"}}
 
-### Create x25519
-POST {{vault_address}}/v1/signer/keys
-Content-Type: application/json
-X-Vault-Token: {{vault_dev_token}}
-
-{"id":"x25519","curve":"x25519","metadata":{"owner":"Alice"}}
-
 ### List
 GET {{vault_address}}/v1/signer/keys
 X-Vault-Token: {{vault_dev_token}}

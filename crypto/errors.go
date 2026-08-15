@@ -17,7 +17,7 @@ const (
 	// (e.g. secp256k1, P-256).
 	KeyTypeEC = "EC"
 
-	// KeyTypeOKP represents Octet Key Pair keys used with EdDSA or ECDH
-	// (e.g. Ed25519, X25519).
+	// KeyTypeOKP represents Octet Key Pair keys used with EdDSA.
+	// (e.g. Ed25519).
 	KeyTypeOKP = "OKP"
 )

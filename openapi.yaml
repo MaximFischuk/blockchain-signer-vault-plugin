@@ -283,7 +283,7 @@ components:
       description: Key identifier.
     Curve:
       type: string
-      enum: [secp256k1, ed25519, p256, x25519]
+      enum: [secp256k1, ed25519, p256]
     Hex:
       type: string
       pattern: '^[0-9a-fA-F]+$'

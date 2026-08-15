@@ -53,11 +53,6 @@ func TestCreateKeyOperation_HappyPath(t *testing.T) {
 			curve:   crypto.P256,
 			keyType: crypto.KeyTypeEC,
 		},
-		{
-			name:    "x25519",
-			curve:   crypto.X25519,
-			keyType: crypto.KeyTypeOKP,
-		},
 	}
 
 	for _, tt := range tests {
@@ -176,7 +171,6 @@ func TestReadKeyOperation_HappyPath(t *testing.T) {
 		{"secp256k1", crypto.Secp256k1},
 		{"ed25519", crypto.Ed25519},
 		{"p256", crypto.P256},
-		{"x25519", crypto.X25519},
 	}
 
 	for _, tt := range tests {
@@ -960,7 +954,6 @@ func TestAllCurves_CreateAndRead(t *testing.T) {
 		crypto.Secp256k1: crypto.KeyTypeEC,
 		crypto.Ed25519:   crypto.KeyTypeOKP,
 		crypto.P256:      crypto.KeyTypeEC,
-		crypto.X25519:    crypto.KeyTypeOKP,
 	}
 
 	for curve, expectedKeyType := range curves {
@@ -1152,7 +1145,6 @@ func TestDeleteKeyOperation_DeleteDifferentCurves(t *testing.T) {
 		{"secp256k1", crypto.Secp256k1},
 		{"ed25519", crypto.Ed25519},
 		{"p256", crypto.P256},
-		{"x25519", crypto.X25519},
 	}
 
 	for _, tt := range tests {

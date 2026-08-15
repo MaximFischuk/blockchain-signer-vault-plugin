@@ -144,8 +144,6 @@ func signHash(key *entities.PrivateKey, hash []byte) (string, error) {
 		return signEd25519(key.PrivateKey, hash)
 	case crypto.P256:
 		return signP256(key.PrivateKey, hash)
-	case crypto.X25519:
-		return "", UnsupportedCurveForSigningError(key.Curve)
 	default:
 		return "", crypto.UnsupportedCurveError(key.Curve)
 	}

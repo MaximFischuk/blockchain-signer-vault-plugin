@@ -46,13 +46,6 @@ func seedP256Key(t *testing.T, ctx context.Context, storage logical.Storage, id 
 	require.NoError(t, err)
 }
 
-// seedX25519Key creates an X25519 key in storage.
-func seedX25519Key(t *testing.T, ctx context.Context, storage logical.Storage, id string) {
-	t.Helper()
-	_, err := keys.NewCreateKeyOperation().WithStorage(storage).Execute(ctx, id, "x25519", nil)
-	require.NoError(t, err)
-}
-
 // --- SignHashOperation tests ---
 
 func TestSignHashOperation_Secp256k1(t *testing.T) {
@@ -127,20 +120,6 @@ func TestSignHashOperation_P256(t *testing.T) {
 	r := new(big.Int).SetBytes(sigBytes[:32])
 	s2 := new(big.Int).SetBytes(sigBytes[32:])
 	assert.True(t, ecdsa.Verify(pubKey, hash[:], r, s2), "P-256 signature verification failed")
-}
-
-func TestSignHashOperation_X25519_Unsupported(t *testing.T) {
-	ctx := context.Background()
-	s := newInMemoryStorage()
-	seedX25519Key(t, ctx, s, "key1")
-
-	hash := sha256.Sum256([]byte("hello world"))
-	hashHex := hex.EncodeToString(hash[:])
-
-	op := sign.NewSignHashOperation().WithStorage(s)
-	_, err := op.Execute(ctx, "key1", hashHex)
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "does not support signing")
 }
 
 func TestSignHashOperation_KeyNotFound(t *testing.T) {
