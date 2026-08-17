@@ -2,7 +2,6 @@ package privatekeys
 
 import (
 	"context"
-	"encoding/hex"
 	"errors"
 
 	"github.com/hashicorp/vault/sdk/framework"
@@ -19,7 +18,7 @@ func (c *controller) NewSignMessageOperation() *framework.PathOperation {
 	return &framework.PathOperation{
 		Callback:    c.signMessageHandler(),
 		Summary:     "Hash and sign a message",
-		Description: "Hashes the provided message (hex-encoded bytes) with the specified hash function and signs the resulting digest using the private key identified by the given ID",
+		Description: "Hashes the provided message using hex (default), base32, base58, base64url, or UTF-8 text encoding, then signs the resulting digest using the private key identified by the given ID",
 		Examples: []framework.RequestExample{
 			{
 				Description: "Hash and sign a message with an existing key",
@@ -38,26 +37,22 @@ func (c *controller) NewSignMessageOperation() *framework.PathOperation {
 func (c *controller) signMessageHandler() framework.OperationFunc {
 	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 		id := data.Get(service.IDLabel).(string)
-		messageHex := data.Get(service.MessageLabel).(string)
+		message := data.Get(service.MessageLabel).(string)
+		encoding := operations.MessageEncoding(data.Get(service.HashEncodingLabel).(string))
 		hashFnStr := data.Get(service.HashFunctionLabel).(string)
 
 		if id == "" {
 			return serviceErrors.ErrorResponse(coreErrors.MissingFieldError("id"))
 		}
-		if messageHex == "" {
+		if message == "" {
 			return serviceErrors.ErrorResponse(coreErrors.MissingFieldError("message"))
 		}
 		if hashFnStr == "" {
 			return serviceErrors.ErrorResponse(coreErrors.MissingFieldError("hash_function"))
 		}
 
-		messageBytes, err := hex.DecodeString(messageHex)
-		if err != nil {
-			return serviceErrors.ErrorResponse(errors.New("message must be a valid hex string"))
-		}
-
 		ctx = log.Context(ctx, c.logger)
-		sig, err := c.operations.SignMessage().WithStorage(req.Storage).Execute(ctx, id, messageBytes, operations.HashFunction(hashFnStr))
+		sig, err := c.operations.SignMessage().WithStorage(req.Storage).Execute(ctx, id, message, encoding, operations.HashFunction(hashFnStr))
 		if err != nil {
 			if isSignClientError(err) {
 				return serviceErrors.ErrorResponse(err)

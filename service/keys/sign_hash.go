@@ -18,7 +18,7 @@ func (c *controller) NewSignHashOperation() *framework.PathOperation {
 	return &framework.PathOperation{
 		Callback:    c.signHashHandler(),
 		Summary:     "Sign a pre-computed hash",
-		Description: "Signs a pre-computed hash (hex-encoded, without 0x prefix) using the private key identified by the given ID",
+		Description: "Signs bytes using hex (default), base32, base58 or base64url encoding",
 		Examples: []framework.RequestExample{
 			{
 				Description: "Sign a pre-computed hash with an existing key",
@@ -37,17 +37,18 @@ func (c *controller) NewSignHashOperation() *framework.PathOperation {
 func (c *controller) signHashHandler() framework.OperationFunc {
 	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 		id := data.Get(service.IDLabel).(string)
-		hashHex := data.Get(service.HashLabel).(string)
+		hash := data.Get(service.HashLabel).(string)
+		encoding := operations.MessageEncoding(data.Get(service.HashEncodingLabel).(string))
 
 		if id == "" {
 			return serviceErrors.ErrorResponse(coreErrors.MissingFieldError("id"))
 		}
-		if hashHex == "" {
+		if hash == "" {
 			return serviceErrors.ErrorResponse(coreErrors.MissingFieldError("hash"))
 		}
 
 		ctx = log.Context(ctx, c.logger)
-		sig, err := c.operations.SignHash().WithStorage(req.Storage).Execute(ctx, id, hashHex)
+		sig, err := c.operations.SignHash().WithStorage(req.Storage).Execute(ctx, id, hash, encoding)
 		if err != nil {
 			if isSignClientError(err) {
 				return serviceErrors.ErrorResponse(err)
@@ -68,6 +69,9 @@ func isSignClientError(err error) bool {
 		return true
 	}
 	if errors.As(err, new(operations.UnsupportedCurveForSigningError)) {
+		return true
+	}
+	if errors.As(err, new(operations.UnsupportedHashEncodingError)) {
 		return true
 	}
 	var coreErr *coreErrors.Error

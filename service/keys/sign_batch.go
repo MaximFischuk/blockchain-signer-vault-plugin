@@ -10,6 +10,7 @@ import (
 	log "github.com/maximfischuk/blockchain-signer-hashicorp-vault-plugin/core/log"
 	"github.com/maximfischuk/blockchain-signer-hashicorp-vault-plugin/service"
 	serviceErrors "github.com/maximfischuk/blockchain-signer-hashicorp-vault-plugin/service/errors"
+	operations "github.com/maximfischuk/blockchain-signer-hashicorp-vault-plugin/vault/operations/sign"
 )
 
 func (c *controller) NewSignBatchHashesOperation() *framework.PathOperation {
@@ -17,7 +18,7 @@ func (c *controller) NewSignBatchHashesOperation() *framework.PathOperation {
 	return &framework.PathOperation{
 		Callback:    c.signBatchHashesHandler(),
 		Summary:     "Sign a batch of pre-computed hashes",
-		Description: "Signs a list of pre-computed hashes (each hex-encoded, without 0x prefix) using the private key identified by the given ID. Signatures are returned in the same order as the input hashes.",
+		Description: "Signs a list of pre-computed hashes using hex (default), base32, base58, or base64url encoding. Signatures are returned in the same order as the input hashes.",
 		Examples: []framework.RequestExample{
 			{
 				Description: "Sign a batch of pre-computed hashes with an existing key",
@@ -37,6 +38,7 @@ func (c *controller) signBatchHashesHandler() framework.OperationFunc {
 	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 		id := data.Get(service.IDLabel).(string)
 		hashes, _ := data.Get(service.HashesLabel).([]string)
+		encoding := operations.MessageEncoding(data.Get(service.HashEncodingLabel).(string))
 
 		if id == "" {
 			return serviceErrors.ErrorResponse(coreErrors.MissingFieldError("id"))
@@ -46,7 +48,7 @@ func (c *controller) signBatchHashesHandler() framework.OperationFunc {
 		}
 
 		ctx = log.Context(ctx, c.logger)
-		signatures, err := c.operations.SignBatchHashes().WithStorage(req.Storage).Execute(ctx, id, hashes)
+		signatures, err := c.operations.SignBatchHashes().WithStorage(req.Storage).Execute(ctx, id, hashes, encoding)
 		if err != nil {
 			if isSignClientError(err) {
 				return serviceErrors.ErrorResponse(err)

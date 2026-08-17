@@ -32,6 +32,7 @@ const (
 	KeysLabel                 = "keys"
 	HashLabel                 = "hash"
 	HashesLabel               = "hashes"
+	HashEncodingLabel         = "encoding"
 	MessageLabel              = "message"
 	HashFunctionLabel         = "hash_function"
 	TransactionTypeLabel      = "type"
@@ -144,20 +145,30 @@ var CurveFieldSchema = &framework.FieldSchema{
 
 var HashFieldSchema = &framework.FieldSchema{
 	Type:        framework.TypeString,
-	Description: "Pre-computed hash to sign, in hex format (without 0x prefix)",
+	Description: "Pre-computed hash to sign",
 	Required:    true,
+}
+
+var HashEncodingFieldSchema = &framework.FieldSchema{
+	Type:        framework.TypeString,
+	Description: "Hash encoding: hex (default), base32, base58, or base64url",
 }
 
 var HashesFieldSchema = &framework.FieldSchema{
 	Type:        framework.TypeCommaStringSlice,
-	Description: "List of pre-computed hashes to sign, each in hex format (without 0x prefix)",
+	Description: "List of pre-computed hashes to sign, each encoded according to encoding",
 	Required:    true,
 }
 
 var MessageFieldSchema = &framework.FieldSchema{
 	Type:        framework.TypeString,
-	Description: "Raw message bytes to hash and sign, in hex format (without 0x prefix)",
+	Description: "Message to hash and sign, encoded according to encoding",
 	Required:    true,
+}
+
+var MessageEncodingFieldSchema = &framework.FieldSchema{
+	Type:        framework.TypeString,
+	Description: "Message encoding: hex (default), base32, base58, base64url, or text (UTF-8)",
 }
 
 var HashFunctionFieldSchema = &framework.FieldSchema{

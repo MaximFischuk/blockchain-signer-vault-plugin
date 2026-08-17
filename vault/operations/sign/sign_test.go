@@ -6,6 +6,8 @@ import (
 	"crypto/ed25519"
 	"crypto/elliptic"
 	"crypto/sha256"
+	"encoding/base32"
+	"encoding/base64"
 	"encoding/hex"
 	"math/big"
 	"testing"
@@ -15,6 +17,7 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 	keys "github.com/maximfischuk/blockchain-signer-hashicorp-vault-plugin/vault/operations/keys"
 	sign "github.com/maximfischuk/blockchain-signer-hashicorp-vault-plugin/vault/operations/sign"
+	"github.com/mr-tron/base58"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -57,7 +60,7 @@ func TestSignHashOperation_Secp256k1(t *testing.T) {
 	hashHex := hex.EncodeToString(hash[:])
 
 	op := sign.NewSignHashOperation().WithStorage(s)
-	sigHex, err := op.Execute(ctx, "key1", hashHex)
+	sigHex, err := op.Execute(ctx, "key1", hashHex, sign.MessageEncodingHex)
 	require.NoError(t, err)
 	assert.NotEmpty(t, sigHex)
 
@@ -83,7 +86,7 @@ func TestSignHashOperation_Ed25519(t *testing.T) {
 	hashHex := hex.EncodeToString(hash[:])
 
 	op := sign.NewSignHashOperation().WithStorage(s)
-	sigHex, err := op.Execute(ctx, "key1", hashHex)
+	sigHex, err := op.Execute(ctx, "key1", hashHex, sign.MessageEncodingHex)
 	require.NoError(t, err)
 	assert.NotEmpty(t, sigHex)
 
@@ -105,7 +108,7 @@ func TestSignHashOperation_P256(t *testing.T) {
 	hashHex := hex.EncodeToString(hash[:])
 
 	op := sign.NewSignHashOperation().WithStorage(s)
-	sigHex, err := op.Execute(ctx, "key1", hashHex)
+	sigHex, err := op.Execute(ctx, "key1", hashHex, sign.MessageEncodingHex)
 	require.NoError(t, err)
 	assert.NotEmpty(t, sigHex)
 
@@ -130,7 +133,7 @@ func TestSignHashOperation_KeyNotFound(t *testing.T) {
 	hashHex := hex.EncodeToString(hash[:])
 
 	op := sign.NewSignHashOperation().WithStorage(s)
-	_, err := op.Execute(ctx, "nonexistent", hashHex)
+	_, err := op.Execute(ctx, "nonexistent", hashHex, sign.MessageEncodingHex)
 	assert.Error(t, err)
 }
 
@@ -140,9 +143,38 @@ func TestSignHashOperation_InvalidHex(t *testing.T) {
 	seedSecp256k1Key(t, ctx, s, "key1")
 
 	op := sign.NewSignHashOperation().WithStorage(s)
-	_, err := op.Execute(ctx, "key1", "not-valid-hex!!")
+	_, err := op.Execute(ctx, "key1", "not-valid-hex!!", sign.MessageEncodingHex)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "invalid hex hash")
+}
+
+func TestSignHashOperation_EncodingsProduceEqualSignatures(t *testing.T) {
+	ctx := context.Background()
+	storage := newInMemoryStorage()
+	seedSecp256k1Key(t, ctx, storage, "key1")
+
+	message := []byte("hello world")
+	cases := []struct {
+		encoding sign.MessageEncoding
+		hash     string
+	}{
+		{sign.MessageEncodingHex, hex.EncodeToString(message)},
+		{sign.MessageEncodingBase32, base32.StdEncoding.EncodeToString(message)},
+		{sign.MessageEncodingBase58, base58.Encode(message)},
+		{sign.MessageEncodingBase64URL, base64.RawURLEncoding.EncodeToString(message)},
+	}
+
+	op := sign.NewSignHashOperation().WithStorage(storage)
+	var expectedSignature string
+	for _, testCase := range cases {
+		signature, err := op.Execute(ctx, "key1", testCase.hash, testCase.encoding)
+		require.NoError(t, err)
+		if expectedSignature == "" {
+			expectedSignature = signature
+			continue
+		}
+		assert.Equal(t, expectedSignature, signature)
+	}
 }
 
 // --- SignMessageOperation tests ---
@@ -154,9 +186,27 @@ func TestSignMessageOperation_SHA256(t *testing.T) {
 
 	message := []byte("hello world")
 	op := sign.NewSignMessageOperation().WithStorage(s)
-	sigHex, err := op.Execute(ctx, "key1", message, sign.HashFunctionSHA256)
-	require.NoError(t, err)
-	assert.NotEmpty(t, sigHex)
+	encodings := []struct {
+		encoding sign.MessageEncoding
+		message  string
+	}{
+		{sign.MessageEncodingHex, hex.EncodeToString(message)},
+		{sign.MessageEncodingBase32, base32.StdEncoding.EncodeToString(message)},
+		{sign.MessageEncodingBase58, base58.Encode(message)},
+		{sign.MessageEncodingBase64URL, base64.RawURLEncoding.EncodeToString(message)},
+		{sign.MessageEncodingText, string(message)},
+	}
+
+	var expectedSignature string
+	for _, testCase := range encodings {
+		signature, err := op.Execute(ctx, "key1", testCase.message, testCase.encoding, sign.HashFunctionSHA256)
+		require.NoError(t, err)
+		if expectedSignature == "" {
+			expectedSignature = signature
+			continue
+		}
+		assert.Equal(t, expectedSignature, signature)
+	}
 }
 
 func TestSignMessageOperation_Keccak256(t *testing.T) {
@@ -164,9 +214,9 @@ func TestSignMessageOperation_Keccak256(t *testing.T) {
 	s := newInMemoryStorage()
 	seedSecp256k1Key(t, ctx, s, "key1")
 
-	message := []byte("hello world")
+	message := hex.EncodeToString([]byte("hello world"))
 	op := sign.NewSignMessageOperation().WithStorage(s)
-	sigHex, err := op.Execute(ctx, "key1", message, sign.HashFunctionKeccak256)
+	sigHex, err := op.Execute(ctx, "key1", message, sign.MessageEncodingHex, sign.HashFunctionKeccak256)
 	require.NoError(t, err)
 	assert.NotEmpty(t, sigHex)
 }
@@ -176,9 +226,9 @@ func TestSignMessageOperation_SHA512(t *testing.T) {
 	s := newInMemoryStorage()
 	seedEd25519Key(t, ctx, s, "key1")
 
-	message := []byte("hello world")
+	message := hex.EncodeToString([]byte("hello world"))
 	op := sign.NewSignMessageOperation().WithStorage(s)
-	sigHex, err := op.Execute(ctx, "key1", message, sign.HashFunctionSHA512)
+	sigHex, err := op.Execute(ctx, "key1", message, sign.MessageEncodingHex, sign.HashFunctionSHA512)
 	require.NoError(t, err)
 	assert.NotEmpty(t, sigHex)
 }
@@ -188,9 +238,9 @@ func TestSignMessageOperation_SHA3_256(t *testing.T) {
 	s := newInMemoryStorage()
 	seedP256Key(t, ctx, s, "key1")
 
-	message := []byte("hello world")
+	message := hex.EncodeToString([]byte("hello world"))
 	op := sign.NewSignMessageOperation().WithStorage(s)
-	sigHex, err := op.Execute(ctx, "key1", message, sign.HashFunctionSHA3256)
+	sigHex, err := op.Execute(ctx, "key1", message, sign.MessageEncodingHex, sign.HashFunctionSHA3256)
 	require.NoError(t, err)
 	assert.NotEmpty(t, sigHex)
 }
@@ -201,7 +251,7 @@ func TestSignMessageOperation_UnsupportedHashFunction(t *testing.T) {
 	seedSecp256k1Key(t, ctx, s, "key1")
 
 	op := sign.NewSignMessageOperation().WithStorage(s)
-	_, err := op.Execute(ctx, "key1", []byte("hello"), "md5")
+	_, err := op.Execute(ctx, "key1", hex.EncodeToString([]byte("hello")), sign.MessageEncodingHex, "md5")
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "unsupported hash function")
 }
@@ -220,7 +270,7 @@ func TestSignBatchHashesOperation_ReturnsInOrder(t *testing.T) {
 	}
 
 	op := sign.NewSignBatchHashesOperation().WithStorage(s)
-	signatures, err := op.Execute(ctx, "key1", hashes)
+	signatures, err := op.Execute(ctx, "key1", hashes, sign.MessageEncodingHex)
 	require.NoError(t, err)
 	assert.Len(t, signatures, len(hashes))
 	for i, sig := range signatures {
@@ -234,7 +284,7 @@ func TestSignBatchHashesOperation_EmptyBatch(t *testing.T) {
 	seedSecp256k1Key(t, ctx, s, "key1")
 
 	op := sign.NewSignBatchHashesOperation().WithStorage(s)
-	signatures, err := op.Execute(ctx, "key1", []string{})
+	signatures, err := op.Execute(ctx, "key1", []string{}, sign.MessageEncodingHex)
 	require.NoError(t, err)
 	assert.Empty(t, signatures)
 }
@@ -250,7 +300,7 @@ func TestSignBatchHashesOperation_InvalidHexInBatch(t *testing.T) {
 	}
 
 	op := sign.NewSignBatchHashesOperation().WithStorage(s)
-	_, err := op.Execute(ctx, "key1", hashes)
+	_, err := op.Execute(ctx, "key1", hashes, sign.MessageEncodingHex)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "index 1")
 }
@@ -260,6 +310,6 @@ func TestSignBatchHashesOperation_KeyNotFound(t *testing.T) {
 	s := newInMemoryStorage()
 
 	op := sign.NewSignBatchHashesOperation().WithStorage(s)
-	_, err := op.Execute(ctx, "nonexistent", []string{hex.EncodeToString(make([]byte, 32))})
+	_, err := op.Execute(ctx, "nonexistent", []string{hex.EncodeToString(make([]byte, 32))}, sign.MessageEncodingHex)
 	assert.Error(t, err)
 }

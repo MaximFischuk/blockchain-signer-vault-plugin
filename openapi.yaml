@@ -57,7 +57,7 @@ paths:
       - $ref: '#/components/parameters/KeyID'
     post:
       tags: [Signing]
-      summary: Sign a hex hash
+      summary: Sign a pre-computed hash
       requestBody:
         $ref: '#/components/requestBodies/SignHash'
       responses:
@@ -317,7 +317,13 @@ components:
       required: [hash]
       properties:
         hash:
-          $ref: '#/components/schemas/Hex'
+          type: string
+          description: Pre-computed hash encoded according to encoding.
+        encoding:
+          type: string
+          default: hex
+          enum: [hex, base32, base58, base64url]
+          description: Encoding used for hash.
     SignBatchRequest:
       type: object
       required: [hashes]
@@ -326,13 +332,24 @@ components:
           type: array
           minItems: 1
           items:
-            $ref: '#/components/schemas/Hex'
+            type: string
+        encoding:
+          type: string
+          default: hex
+          enum: [hex, base32, base58, base64url]
+          description: Encoding used for each hash.
     SignMessageRequest:
       type: object
       required: [message, hash_function]
       properties:
         message:
-          $ref: '#/components/schemas/Hex'
+          type: string
+          description: Message encoded according to encoding.
+        encoding:
+          type: string
+          default: text
+          enum: [text, hex, base32, base58, base64url]
+          description: Encoding used for message. text is UTF-8.
         hash_function:
           type: string
           enum: [sha256, keccak256, sha512, sha3-256]

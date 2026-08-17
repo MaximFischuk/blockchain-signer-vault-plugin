@@ -84,15 +84,16 @@ func (c *controller) pathSignHash() *framework.Path {
 	return &framework.Path{
 		Pattern:         "keys/" + framework.GenericNameRegex(service.IDLabel) + "/sign/hash",
 		HelpSynopsis:    "Sign a pre-computed hash",
-		HelpDescription: "Signs a pre-computed hash (hex-encoded) using the private key identified by the given ID",
+		HelpDescription: "Signs a pre-computed hash using the private key identified by the given ID",
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.CreateOperation: c.NewSignHashOperation(),
 			logical.UpdateOperation: c.NewSignHashOperation(),
 		},
 		ExistenceCheck: c.ExistenceCheck(),
 		Fields: map[string]*framework.FieldSchema{
-			service.IDLabel:   service.IDFieldSchema,
-			service.HashLabel: service.HashFieldSchema,
+			service.IDLabel:           service.IDFieldSchema,
+			service.HashLabel:         service.HashFieldSchema,
+			service.HashEncodingLabel: service.HashEncodingFieldSchema,
 		},
 	}
 }
@@ -110,6 +111,7 @@ func (c *controller) pathSignMessage() *framework.Path {
 		Fields: map[string]*framework.FieldSchema{
 			service.IDLabel:           service.IDFieldSchema,
 			service.MessageLabel:      service.MessageFieldSchema,
+			service.HashEncodingLabel: service.MessageEncodingFieldSchema,
 			service.HashFunctionLabel: service.HashFunctionFieldSchema,
 		},
 	}
@@ -192,8 +194,9 @@ func (c *controller) pathSignBatchHashes() *framework.Path {
 		},
 		ExistenceCheck: c.ExistenceCheck(),
 		Fields: map[string]*framework.FieldSchema{
-			service.IDLabel:     service.IDFieldSchema,
-			service.HashesLabel: service.HashesFieldSchema,
+			service.IDLabel:           service.IDFieldSchema,
+			service.HashesLabel:       service.HashesFieldSchema,
+			service.HashEncodingLabel: service.HashEncodingFieldSchema,
 		},
 	}
 }

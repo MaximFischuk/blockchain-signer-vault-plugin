@@ -39,6 +39,13 @@ X-Vault-Token: {{vault_dev_token}}
 
 {"hash":"a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3"}
 
+### Sign hash encoded as base64url
+POST {{vault_address}}/v1/signer/keys/secp256k1/sign/hash
+Content-Type: application/json
+X-Vault-Token: {{vault_dev_token}}
+
+{"hash":"pmWkWSBCL51Bfkhn79xPuKBaHz__H6B-mY6G9_eieuM","encoding":"base64url"}
+
 ### Sign batch
 POST {{vault_address}}/v1/signer/keys/secp256k1/sign/batch
 Content-Type: application/json
@@ -46,12 +53,26 @@ X-Vault-Token: {{vault_dev_token}}
 
 {"hashes":["a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3","b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9"]}
 
+### Sign batch encoded as base64url
+POST {{vault_address}}/v1/signer/keys/secp256k1/sign/batch
+Content-Type: application/json
+X-Vault-Token: {{vault_dev_token}}
+
+{"hashes":["pmWkWSBCL51Bfkhn79xPuKBaHz__H6B-mY6G9_eieuM"],"encoding":"base64url"}
+
 ### Sign message sha256
 POST {{vault_address}}/v1/signer/keys/secp256k1/sign/message
 Content-Type: application/json
 X-Vault-Token: {{vault_dev_token}}
 
 {"message":"68656c6c6f","hash_function":"sha256"}
+
+### Sign plain text message
+POST {{vault_address}}/v1/signer/keys/secp256k1/sign/message
+Content-Type: application/json
+X-Vault-Token: {{vault_dev_token}}
+
+{"message":"hello world","encoding":"text","hash_function":"sha256"}
 
 ### Sign message keccak256
 POST {{vault_address}}/v1/signer/keys/secp256k1/sign/message

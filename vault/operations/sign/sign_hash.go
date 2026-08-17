@@ -2,10 +2,13 @@ package sign
 
 import (
 	"context"
+	"encoding/base32"
+	"encoding/base64"
 	"encoding/hex"
 	"fmt"
 
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/mr-tron/base58"
 )
 
 // HashFunction identifies the hash algorithm used to pre-hash a message before signing.
@@ -25,9 +28,27 @@ func (e UnsupportedHashFunctionError) Error() string {
 	return fmt.Sprintf("unsupported hash function: %q", string(e))
 }
 
-// SignHashOperation signs a pre-computed hash (provided as hex) with the key identified by id.
+// MessageEncoding identifies the encoding used for a pre-computed hash.
+type MessageEncoding string
+
+const (
+	MessageEncodingHex       MessageEncoding = "hex"
+	MessageEncodingBase32    MessageEncoding = "base32"
+	MessageEncodingBase58    MessageEncoding = "base58"
+	MessageEncodingBase64URL MessageEncoding = "base64url"
+	MessageEncodingText      MessageEncoding = "text"
+)
+
+// UnsupportedHashEncodingError is returned when an unknown hash encoding is requested.
+type UnsupportedHashEncodingError string
+
+func (e UnsupportedHashEncodingError) Error() string {
+	return fmt.Sprintf("unsupported hash encoding: %q", string(e))
+}
+
+// SignHashOperation signs a pre-computed hash with the key identified by id.
 type SignHashOperation interface {
-	Execute(ctx context.Context, id string, hashHex string) (string, error)
+	Execute(ctx context.Context, id, hash string, encoding MessageEncoding) (string, error)
 	WithStorage(storage logical.Storage) SignHashOperation
 }
 
@@ -44,10 +65,10 @@ func (o signHashOperation) WithStorage(s logical.Storage) SignHashOperation {
 	return &o
 }
 
-func (o *signHashOperation) Execute(ctx context.Context, id string, hashHex string) (string, error) {
-	hashBytes, err := hex.DecodeString(hashHex)
+func (o *signHashOperation) Execute(ctx context.Context, id, hash string, encoding MessageEncoding) (string, error) {
+	hashBytes, err := decodeHash(hash, encoding)
 	if err != nil {
-		return "", fmt.Errorf("invalid hex hash: %w", err)
+		return "", err
 	}
 
 	key, err := loadKey(ctx, o.storage, id)
@@ -58,9 +79,57 @@ func (o *signHashOperation) Execute(ctx context.Context, id string, hashHex stri
 	return signHash(key, hashBytes)
 }
 
+func decodeHash(hash string, encoding MessageEncoding) ([]byte, error) {
+	switch encoding {
+	case "", MessageEncodingHex:
+		value, err := hex.DecodeString(hash)
+		if err != nil {
+			return nil, fmt.Errorf("invalid hex hash: %w", err)
+		}
+		return value, nil
+	case MessageEncodingBase32:
+		value, err := base32.StdEncoding.DecodeString(hash)
+		if err == nil {
+			return value, nil
+		}
+		value, err = base32.StdEncoding.WithPadding(base32.NoPadding).DecodeString(hash)
+		if err != nil {
+			return nil, fmt.Errorf("invalid base32 hash: %w", err)
+		}
+		return value, nil
+	case MessageEncodingBase58:
+		value, err := base58.Decode(hash)
+		if err != nil {
+			return nil, fmt.Errorf("invalid base58 hash: %w", err)
+		}
+		return value, nil
+	case MessageEncodingBase64URL:
+		value, err := base64.URLEncoding.DecodeString(hash)
+		if err == nil {
+			return value, nil
+		}
+		value, err = base64.RawURLEncoding.DecodeString(hash)
+		if err != nil {
+			return nil, fmt.Errorf("invalid base64url hash: %w", err)
+		}
+		return value, nil
+	default:
+		return nil, UnsupportedHashEncodingError(encoding)
+	}
+}
+
+func decodeMessage(message string, encoding MessageEncoding) ([]byte, error) {
+	switch encoding {
+	case "", MessageEncodingText:
+		return []byte(message), nil
+	default:
+		return decodeHash(message, encoding)
+	}
+}
+
 // SignMessageOperation hashes the message with the given hash function then signs the digest.
 type SignMessageOperation interface {
-	Execute(ctx context.Context, id string, message []byte, hashFn HashFunction) (string, error)
+	Execute(ctx context.Context, id, message string, encoding MessageEncoding, hashFn HashFunction) (string, error)
 	WithStorage(storage logical.Storage) SignMessageOperation
 }
 
@@ -77,8 +146,13 @@ func (o signMessageOperation) WithStorage(s logical.Storage) SignMessageOperatio
 	return &o
 }
 
-func (o *signMessageOperation) Execute(ctx context.Context, id string, message []byte, hashFn HashFunction) (string, error) {
-	digest, err := hashMessage(message, hashFn)
+func (o *signMessageOperation) Execute(ctx context.Context, id, message string, encoding MessageEncoding, hashFn HashFunction) (string, error) {
+	messageBytes, err := decodeMessage(message, encoding)
+	if err != nil {
+		return "", err
+	}
+
+	digest, err := hashMessage(messageBytes, hashFn)
 	if err != nil {
 		return "", err
 	}
@@ -91,10 +165,10 @@ func (o *signMessageOperation) Execute(ctx context.Context, id string, message [
 	return signHash(key, digest)
 }
 
-// SignBatchHashesOperation signs a list of pre-computed hashes (each in hex) and returns
-// signatures in the same order as the input.
+// SignBatchHashesOperation signs a list of pre-computed hashes and returns signatures in
+// the same order as the input.
 type SignBatchHashesOperation interface {
-	Execute(ctx context.Context, id string, hashHexList []string) ([]string, error)
+	Execute(ctx context.Context, id string, hashes []string, encoding MessageEncoding) ([]string, error)
 	WithStorage(storage logical.Storage) SignBatchHashesOperation
 }
 
@@ -111,17 +185,17 @@ func (o signBatchHashesOperation) WithStorage(s logical.Storage) SignBatchHashes
 	return &o
 }
 
-func (o *signBatchHashesOperation) Execute(ctx context.Context, id string, hashHexList []string) ([]string, error) {
+func (o *signBatchHashesOperation) Execute(ctx context.Context, id string, hashes []string, encoding MessageEncoding) ([]string, error) {
 	key, err := loadKey(ctx, o.storage, id)
 	if err != nil {
 		return nil, err
 	}
 
-	signatures := make([]string, len(hashHexList))
-	for i, hashHex := range hashHexList {
-		hashBytes, err := hex.DecodeString(hashHex)
+	signatures := make([]string, len(hashes))
+	for i, hash := range hashes {
+		hashBytes, err := decodeHash(hash, encoding)
 		if err != nil {
-			return nil, fmt.Errorf("invalid hex hash at index %d: %w", i, err)
+			return nil, fmt.Errorf("invalid hash at index %d: %w", i, err)
 		}
 		sig, err := signHash(key, hashBytes)
 		if err != nil {
