@@ -1,0 +1,46 @@
+name: Create Draft Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  create-draft-release:
+    name: Create Draft Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out release history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Determine release refs
+        id: refs
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          echo "tag=$RELEASE_TAG" >> "$GITHUB_OUTPUT"
+          if base_ref="$(git describe --tags --abbrev=0 "${GITHUB_SHA}^" 2>/dev/null)"; then
+            echo "base-ref=$base_ref" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Generate release notes
+        id: notes
+        uses: github/copilot-release-notes@main
+        if: steps.refs.outputs.base-ref != ''
+        with:
+          base-ref: ${{ steps.refs.outputs.base-ref }}
+          head-ref: ${{ steps.refs.outputs.tag }}
+        env:
+          COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN }}
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.refs.outputs.tag }}
+          body: ${{ steps.notes.outputs.release-notes || '' }}
+          draft: true
