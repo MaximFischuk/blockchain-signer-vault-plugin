@@ -50,6 +50,14 @@ const (
 	NamespaceHeader = "X-Vault-Namespace"
 )
 
+const (
+	FromLabel                   = "from"
+	GasPerPubdataByteLimitLabel = "gasPerPubdataByteLimit"
+	PaymasterLabel              = "paymaster"
+	FactoryDepsLabel            = "factoryDeps"
+	PaymasterInputLabel         = "paymasterInput"
+)
+
 var IDFieldSchema = &framework.FieldSchema{
 	Type:        framework.TypeString,
 	Description: "ID of the key pair",
@@ -217,4 +225,31 @@ var EntryPointVersionFieldSchema = &framework.FieldSchema{
 	Type:        framework.TypeString,
 	Description: "EntryPoint version: 0.7, 0.8, or 0.9",
 	Required:    true,
+}
+
+var FromFieldSchema = &framework.FieldSchema{
+	Type:        framework.TypeString,
+	Description: "Sender address of the zkSync transaction",
+	Required:    true,
+}
+
+var GasPerPubdataByteLimitFieldSchema = &framework.FieldSchema{
+	Type:        framework.TypeString,
+	Description: "Maximum gas price for a byte of zkSync pubdata as a hexadecimal quantity",
+	Required:    true,
+}
+
+var PaymasterFieldSchema = &framework.FieldSchema{
+	Type:        framework.TypeString,
+	Description: "zkSync paymaster address. Omit when no paymaster is used",
+}
+
+var FactoryDepsFieldSchema = &framework.FieldSchema{
+	Type:        framework.TypeCommaStringSlice,
+	Description: "List of 32-byte factory dependency hashes in hexadecimal format",
+}
+
+var PaymasterInputFieldSchema = &framework.FieldSchema{
+	Type:        framework.TypeString,
+	Description: "Paymaster input bytes in hexadecimal format",
 }

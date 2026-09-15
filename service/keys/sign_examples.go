@@ -1,10 +1,26 @@
 package privatekeys
 
-import "github.com/hashicorp/vault/sdk/framework"
+import (
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/maximfischuk/blockchain-signer-hashicorp-vault-plugin/service"
+)
 
 const (
 	exampleSignature = "3044022049b4b5a4f8b3c2e1d0a9f8e7d6c5b4a3f2e1d0c9b8a7f6e5d4c3b2a1f0e9d8c702201a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b"
 )
+
+func ExampleZkSyncEIP712TransactionRequestData() map[string]any {
+	return map[string]any{
+		service.FromLabel:                   "0x9f22F7C0c9D5a27881D1b4A29d14A7F88547DdbD",
+		service.ToLabel:                     "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045",
+		service.GasLimitLabel:               "0x249f0",
+		service.GasPerPubdataByteLimitLabel: "0xc350",
+		service.MaxFeePerGasLabel:           "0x3e8",
+		service.MaxPriorityFeePerGasLabel:   "0x64",
+		service.NonceLabel:                  "0x7",
+		service.ChainIDLabel:                "0x144",
+	}
+}
 
 func Example200ResponseSignHash() *framework.Response {
 	return &framework.Response{
@@ -50,6 +66,13 @@ func Example200ResponseSignEthereumTypedData() *framework.Response {
 func Example200ResponseSignEthereumUserOperation() *framework.Response {
 	return &framework.Response{
 		Description: "ERC-4337 UserOperation signed successfully",
+		Example:     SignatureResponse("0x49b4b5a4f8b3c2e1d0a9f8e7d6c5b4a3f2e1d0c9b8a7f6e5d4c3b2a1f0e9d8c71a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b1b"),
+	}
+}
+
+func Example200ResponseSignZkSyncTransaction() *framework.Response {
+	return &framework.Response{
+		Description: "zkSync EIP-712 transaction signed successfully",
 		Example:     SignatureResponse("0x49b4b5a4f8b3c2e1d0a9f8e7d6c5b4a3f2e1d0c9b8a7f6e5d4c3b2a1f0e9d8c71a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b1b"),
 	}
 }
