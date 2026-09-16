@@ -58,8 +58,8 @@ func (c *controller) signZkSyncTransactionHandler() framework.OperationFunc {
 				factoryDeps, _ := data.Get(service.FactoryDepsLabel).([]string)
 				return factoryDeps
 			}(),
-			PaymasterInput:         data.Get(service.PaymasterInputLabel).(string),
-			ChainID:                data.Get(service.ChainIDLabel).(string),
+			PaymasterInput: data.Get(service.PaymasterInputLabel).(string),
+			ChainID:        data.Get(service.ChainIDLabel).(string),
 		}
 
 		ctx = log.Context(ctx, c.logger)
