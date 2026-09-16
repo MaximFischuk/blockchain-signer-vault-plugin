@@ -54,7 +54,10 @@ func (c *controller) signZkSyncTransactionHandler() framework.OperationFunc {
 			Nonce:                  data.Get(service.NonceLabel).(string),
 			Value:                  data.Get(service.AmountLabel).(string),
 			Data:                   data.Get(service.DataLabel).(string),
-			FactoryDeps:            data.Get(service.FactoryDepsLabel).([]string),
+			FactoryDeps: func() []string {
+				factoryDeps, _ := data.Get(service.FactoryDepsLabel).([]string)
+				return factoryDeps
+			}(),
 			PaymasterInput:         data.Get(service.PaymasterInputLabel).(string),
 			ChainID:                data.Get(service.ChainIDLabel).(string),
 		}
