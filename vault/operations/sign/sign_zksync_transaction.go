@@ -112,9 +112,12 @@ func hashZkSyncEIP712Transaction(transaction ZkSyncEIP712Transaction) (common.Ha
 	if err != nil {
 		return common.Hash{}, err
 	}
-	maxPriorityFeePerGas, err := parseZkSyncQuantity("maxPriorityFeePerGas", transaction.MaxPriorityFeePerGas, false)
+maxPriorityFeePerGas, err := parseZkSyncQuantity("maxPriorityFeePerGas", transaction.MaxPriorityFeePerGas, false)
 	if err != nil {
 		return common.Hash{}, err
+	}
+	if maxFeePerGas.Cmp(maxPriorityFeePerGas) < 0 {
+		return common.Hash{}, &InvalidZkSyncTransactionError{message: "maxFeePerGas must be greater than or equal to maxPriorityFeePerGas"}
 	}
 	paymaster, err := parseZkSyncAddress("paymaster", transaction.Paymaster, true)
 	if err != nil {
