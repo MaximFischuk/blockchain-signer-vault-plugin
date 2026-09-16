@@ -157,6 +157,24 @@ paths:
           $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalError'
+  /v1/signer/keys/{id}/sign/zksync/eip712-transaction:
+    parameters:
+      - $ref: '#/components/parameters/KeyID'
+    post:
+      tags: [Signing, zkSync]
+      summary: Sign a zkSync EIP-712 transaction
+      description: Requires a secp256k1 key. Uses transaction type 0x71 and the zkSync v2 EIP-712 domain.
+      requestBody:
+        $ref: '#/components/requestBodies/SignZkSyncEIP712Transaction'
+      responses:
+        '200':
+          $ref: '#/components/responses/EthereumSignature'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
 components:
   securitySchemes:
     VaultToken:
@@ -213,6 +231,12 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/EthereumUserOperationRequest'
+    SignZkSyncEIP712Transaction:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ZkSyncEIP712TransactionRequest'
   responses:
     KeyCreated:
       description: Key created.
@@ -483,6 +507,39 @@ components:
           $ref: '#/components/schemas/EthereumQuantity'
         paymasterData:
           $ref: '#/components/schemas/HexData'
+    ZkSyncEIP712TransactionRequest:
+      type: object
+      required: [from, to, gas, gasPerPubdataByteLimit, maxFeePerGas, maxPriorityFeePerGas, nonce, chainId]
+      properties:
+        from:
+          $ref: '#/components/schemas/EthereumAddress'
+        to:
+          $ref: '#/components/schemas/EthereumAddress'
+        gas:
+          $ref: '#/components/schemas/EthereumQuantity'
+        gasPerPubdataByteLimit:
+          $ref: '#/components/schemas/EthereumQuantity'
+        maxFeePerGas:
+          $ref: '#/components/schemas/EthereumQuantity'
+        maxPriorityFeePerGas:
+          $ref: '#/components/schemas/EthereumQuantity'
+        paymaster:
+          $ref: '#/components/schemas/EthereumAddress'
+        nonce:
+          $ref: '#/components/schemas/EthereumQuantity'
+        value:
+          $ref: '#/components/schemas/EthereumQuantity'
+        data:
+          $ref: '#/components/schemas/HexData'
+        factoryDeps:
+          type: array
+          items:
+            type: string
+            pattern: '^0x[0-9a-fA-F]{64}$'
+        paymasterInput:
+          $ref: '#/components/schemas/HexData'
+        chainId:
+          $ref: '#/components/schemas/EthereumQuantity'
     KeyCreatedData:
       type: object
       required: [id, curve, public_key, metadata]

@@ -7,4 +7,5 @@ type SignOperations interface {
 	SignEthereumTransaction() SignEthereumTransactionOperation
 	SignEthereumTypedData() SignEthereumTypedDataOperation
 	SignEthereumUserOperation() SignEthereumUserOperationOperation
+	SignZkSyncTransaction() SignZkSyncTransactionOperation
 }

@@ -20,6 +20,7 @@ require (
 	cloud.google.com/go/cloudsqlconn v1.25.0 // indirect
 	cloud.google.com/go/compute/metadata v0.9.0 // indirect
 	cloud.google.com/go/sql v0.1.0 // indirect
+	filippo.io/nistec v0.0.4 // indirect
 	github.com/Microsoft/go-winio v0.6.2 // indirect
 	github.com/ProjectZKM/Ziren/crates/go-runtime/zkvm_runtime v0.0.0-20260814054414-7dc2037c6ef9 // indirect
 	github.com/armon/go-metrics v0.4.1 // indirect

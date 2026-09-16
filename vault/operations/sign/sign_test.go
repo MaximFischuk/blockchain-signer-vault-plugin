@@ -12,6 +12,7 @@ import (
 	"math/big"
 	"testing"
 
+	"filippo.io/nistec"
 	"github.com/decred/dcrd/dcrec/secp256k1/v4"
 	secp256k1ecdsa "github.com/decred/dcrd/dcrec/secp256k1/v4/ecdsa"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -113,11 +114,12 @@ func TestSignHashOperation_P256(t *testing.T) {
 	assert.NotEmpty(t, sigHex)
 
 	// Verify using P-256: reconstruct public key from compressed point
-	pubKeyBytes, _ := hex.DecodeString(key.PublicKey)
-	curve := elliptic.P256()
-	x, y := elliptic.UnmarshalCompressed(curve, pubKeyBytes)
-	require.NotNil(t, x, "failed to unmarshal compressed P-256 public key")
-	pubKey := &ecdsa.PublicKey{Curve: curve, X: x, Y: y}
+	publicKeyBytes, err := hex.DecodeString(key.PublicKey)
+	require.NoError(t, err)
+	point, err := new(nistec.P256Point).SetBytes(publicKeyBytes)
+	require.NoError(t, err)
+	pubKey, err := ecdsa.ParseUncompressedPublicKey(elliptic.P256(), point.Bytes())
+	require.NoError(t, err)
 
 	sigBytes, _ := hex.DecodeString(sigHex)
 	r := new(big.Int).SetBytes(sigBytes[:32])

@@ -41,6 +41,7 @@ func (c *controller) Paths() []*framework.Path {
 			c.pathSignEthereumTransaction(),
 			c.pathSignEthereumTypedData(),
 			c.pathSignEthereumUserOperation(),
+			c.pathSignZkSyncTransaction(),
 		},
 	)
 }
@@ -183,6 +184,35 @@ func (c *controller) pathSignEthereumUserOperation() *framework.Path {
 	}
 }
 
+func (c *controller) pathSignZkSyncTransaction() *framework.Path {
+	return &framework.Path{
+		Pattern:         "keys/" + framework.GenericNameRegex(service.IDLabel) + "/sign/zksync/eip712-transaction",
+		HelpSynopsis:    "Sign a zkSync EIP-712 transaction",
+		HelpDescription: "Hashes and signs a zkSync native EIP-712 transaction with the specified secp256k1 key.",
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.CreateOperation: c.NewSignZkSyncTransactionOperation(),
+			logical.UpdateOperation: c.NewSignZkSyncTransactionOperation(),
+		},
+		ExistenceCheck: c.ExistenceCheck(),
+		Fields: map[string]*framework.FieldSchema{
+			service.IDLabel:                     service.IDFieldSchema,
+			service.FromLabel:                   service.FromFieldSchema,
+			service.ToLabel:                     service.ToFieldSchema,
+			service.GasLimitLabel:               service.GasLimitFieldSchema,
+			service.GasPerPubdataByteLimitLabel: service.GasPerPubdataByteLimitFieldSchema,
+			service.MaxFeePerGasLabel:           service.MaxFeePerGasFieldSchema,
+			service.MaxPriorityFeePerGasLabel:   service.MaxPriorityFeePerGasFieldSchema,
+			service.PaymasterLabel:              service.PaymasterFieldSchema,
+			service.NonceLabel:                  service.NonceFieldSchema,
+			service.AmountLabel:                 service.AmountFieldSchema,
+			service.DataLabel:                   service.DataFieldSchema,
+			service.FactoryDepsLabel:            service.FactoryDepsFieldSchema,
+			service.PaymasterInputLabel:         service.PaymasterInputFieldSchema,
+			service.ChainIDLabel:                service.ChainIDFieldSchema,
+		},
+	}
+}
+
 func (c *controller) pathSignBatchHashes() *framework.Path {
 	return &framework.Path{
 		Pattern:         "keys/" + framework.GenericNameRegex(service.IDLabel) + "/sign/batch",
@@ -214,6 +244,7 @@ type keysOperations struct {
 	signEthereumTransaction signOperations.SignEthereumTransactionOperation
 	signEthereumTypedData   signOperations.SignEthereumTypedDataOperation
 	signEthereumUserOp      signOperations.SignEthereumUserOperationOperation
+	signZkSyncTransaction   signOperations.SignZkSyncTransactionOperation
 }
 
 func newKeysOperations() ControllerOperations {
@@ -230,6 +261,7 @@ func newKeysOperations() ControllerOperations {
 		signEthereumTransaction: signOperations.NewSignEthereumTransactionOperation(),
 		signEthereumTypedData:   signOperations.NewSignEthereumTypedDataOperation(),
 		signEthereumUserOp:      signOperations.NewSignEthereumUserOperationOperation(),
+		signZkSyncTransaction:   signOperations.NewSignZkSyncTransactionOperation(),
 	}
 }
 
@@ -279,4 +311,8 @@ func (o *keysOperations) SignEthereumTypedData() signOperations.SignEthereumType
 
 func (o *keysOperations) SignEthereumUserOperation() signOperations.SignEthereumUserOperationOperation {
 	return o.signEthereumUserOp
+}
+
+func (o *keysOperations) SignZkSyncTransaction() signOperations.SignZkSyncTransactionOperation {
+	return o.signZkSyncTransaction
 }
