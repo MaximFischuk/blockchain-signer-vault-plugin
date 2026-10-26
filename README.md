@@ -2,6 +2,8 @@
 
 Hashicorp Vault secrets plugin for storing blockchain signing keys and signing data without returning private key material. It uses Vault plugin multiplexing through `plugin.ServeMultiplex`.
 
+> **Active development:** The API and storage layout may change. Review the [release notes](https://github.com/MaximFischuk/blockchain-signer-vault-plugin/releases) for breaking changes before upgrading.
+
 Project inspired by [ConsenSys quorum-hashicorp-vault-plugin](https://github.com/ConsenSys/quorum-hashicorp-vault-plugin), which is no longer maintained.
 
 ## Supported signing
